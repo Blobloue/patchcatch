@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PatchCatch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: one narrow column like a console scribble-strip panel; dark stage world, single theme by choice */
+:root{
+  --bg:#11141a; --panel:#1a1f28; --panel2:#232a35; --line:#2b3240; --text:#e9ecf1; --muted:#8e97a6;
+  --accent:#f2a93b; --good:#4cc38a; --bad:#ef6461;
+  --dr:#e5534b; --bs:#4a90e2; --gt:#e3b341; --ky:#3fb950; --vx:#b07cf0; --mi:#8e97a6; --cy:#3ec5d6;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+#app{max-width:560px;margin:0 auto;padding:calc(16px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:14px;min-height:100%}
+h1,h2{font-family:var(--display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:44px;line-height:1}
+h2{font-size:28px}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{background:var(--accent);color:#1a1205;font-weight:600;border-radius:10px;padding:14px 18px;font-size:17px;width:100%}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+
+.hero{display:flex;flex-direction:column;gap:8px;padding:8px 0 4px}
+.tape{display:inline-block;align-self:flex-start;background:#d9d4c3;color:#222;font-family:var(--display);font-weight:600;font-size:14px;padding:2px 10px;transform:rotate(-1.5deg);letter-spacing:.06em;text-transform:uppercase}
+h1 .c{color:var(--accent)}
+.sect{font-family:var(--display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:6px}
+.mode{display:flex;flex-direction:column;gap:5px;text-align:left;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--c,var(--accent));border-radius:10px;padding:13px 16px;width:100%}
+button.mode:active{transform:translateY(1px)}
+.mode .name{font-family:var(--display);font-size:25px;font-weight:700;line-height:1.1}
+.mode .meta{font-family:var(--mono);font-size:13px;color:var(--c,var(--accent))}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.duo button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.duo button b{font-size:16px}
+.duo button span{font-family:var(--mono);font-size:12px;color:var(--c,var(--accent))}
+.duo button:active{transform:translateY(1px)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border-radius:8px;padding:9px 0;font-weight:600;font-size:15px;color:var(--muted)}
+.seg button.on{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--accent)}
+.listcard{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:12px 14px}
+.listcard .prev{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.listcard button{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;flex:none}
+
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.top .x{border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text);font-family:var(--body);font-size:14px}
+.top .tt{flex:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill{border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.pill.lv{color:var(--accent);border-color:var(--accent)}
+.pill.hot{color:var(--bad);border-color:var(--bad)}
+.progress{height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.label{font-family:var(--display);font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.rule{border-left:3px solid var(--cy);background:#14202a;border-radius:0 8px 8px 0;padding:8px 12px;font-size:14px}
+.rule b{color:var(--cy);font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:13px;margin-right:6px}
+
+.chlist{display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:column;gap:4px 10px}
+.ch{display:grid;grid-template-columns:28px 4px 1fr;align-items:center;gap:7px;font-size:14px;min-height:24px;min-width:0}
+.ch .n{font-family:var(--mono);color:var(--muted);text-align:right;font-size:13px}
+.ch .s{height:16px;border-radius:2px}
+.ch .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chlist.big .ch{font-size:16px;min-height:28px}
+
+.ops{display:flex;flex-direction:column;gap:6px}
+.op{font-family:var(--mono);font-size:15px;background:var(--panel2);border-radius:8px;padding:8px 10px;display:flex;gap:4px 10px;align-items:baseline;flex-wrap:wrap}
+.op b{color:var(--accent);font-weight:700}
+.op .k{color:var(--muted);font-size:12px}
+.op .hint{color:var(--muted);font-size:12px;flex-basis:100%;font-family:var(--body)}
+.hidden-ops{font-size:14px;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:10px;text-align:center}
+
+.ask{display:flex;flex-direction:column;gap:2px;padding:4px 2px}
+.ask .big{font-family:var(--display);font-size:38px;font-weight:700;line-height:1.05;word-break:break-word}
+.ask .big.mono{font-family:var(--mono);font-size:clamp(36px,11vw,52px);letter-spacing:-.02em}
+.ask .big.word{font-family:var(--body);font-size:21px;font-weight:600;line-height:1.3}
+.timer{font-family:var(--mono);font-size:13px;color:var(--muted)}
+
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts.one{grid-template-columns:1fr}
+.opt{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px 10px;font-size:17px;font-weight:600;min-height:54px}
+.opts.one .opt{text-align:left;padding:12px 14px;font-size:16px}
+.opt.ok{border-color:var(--good);background:rgba(76,195,138,.15)}
+.opt.no{border-color:var(--bad);background:rgba(239,100,97,.15)}
+
+.boxes{display:flex;flex-wrap:wrap;gap:8px}
+.sb{font-family:var(--mono);font-size:14px;background:var(--panel2);border-radius:6px;padding:6px 10px}
+.sb b{color:var(--bs)}
+.entry .disp{font-family:var(--mono);font-size:30px;font-weight:700;background:#0b0e12;border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-height:56px;display:flex;align-items:center;gap:8px;letter-spacing:.04em}
+.entry .disp .ph{color:#4a5262;font-size:18px;font-weight:500;letter-spacing:0}
+.boxsel{display:flex;gap:8px;flex-wrap:wrap}
+.boxsel button{flex:1;min-width:64px;border:1px solid var(--line);border-radius:10px;padding:10px 0;font-family:var(--mono);font-weight:700;background:var(--panel)}
+.boxsel button.on{border-color:var(--bs);background:rgba(74,144,226,.2);color:#cfe2fb}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.keys button{background:var(--panel);border:1px solid var(--line);border-radius:10px;height:54px;font-family:var(--mono);font-size:22px;font-weight:700}
+.keys button.okk{background:var(--accent);color:#1a1205;border-color:var(--accent);font-family:var(--body);font-size:18px}
+.keys button:active,.opt:active,.boxsel button:active,.chk:active{transform:translateY(1px)}
+
+.rep{font-family:var(--display);font-size:30px;font-weight:700;line-height:1.05}
+.sym{font-size:19px;font-weight:600;color:var(--bad)}
+.hist{font-size:14px;color:var(--text)}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:14px;text-align:left;background:var(--panel2);min-height:46px}
+.chk:disabled{opacity:.4;cursor:default}
+.log{display:flex;flex-direction:column;gap:6px}
+.logi{display:flex;flex-direction:column;font-size:15px;border-left:3px solid var(--accent);padding:4px 10px;background:#151a22;border-radius:0 6px 6px 0}
+.logi b{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.chainv{display:flex;align-items:flex-start;padding:4px 0}
+.nd{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);width:58px;text-align:center;line-height:1.2;flex:none}
+.nd i{width:16px;height:16px;border-radius:50%;background:var(--line);border:2px solid #3a4352}
+.nd.ok i{background:var(--good);border-color:var(--good)} .nd.bad i{background:var(--bad);border-color:var(--bad)} .nd.warn i{background:var(--accent);border-color:var(--accent)}
+.ln{flex:1;height:2px;background:var(--line);margin-top:8px;min-width:6px}
+
+.fb{border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;border:1px solid}
+.fb.good{border-color:var(--good);background:rgba(76,195,138,.1)}
+.fb.bad{border-color:var(--bad);background:rgba(239,100,97,.1)}
+.fb .h{font-family:var(--display);font-size:22px;font-weight:700}
+.fb.good .h{color:var(--good)} .fb.bad .h{color:var(--bad)}
+.lesson{border-left:3px solid var(--cy);padding:4px 10px;font-size:15px}
+.lesson b{display:block;color:var(--cy);font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:13px}
+
+.flash{display:grid;place-items:center;min-height:150px;font-family:var(--mono);font-weight:700;font-size:96px;color:var(--accent);background:#0b0e12;border:1px solid var(--line);border-radius:14px}
+.flash.dim{font-size:18px;color:var(--muted);font-family:var(--body);font-weight:500}
+.lamps{display:flex;gap:36px;justify-content:center;align-items:center;min-height:170px;background:#0b0e12;border:1px solid var(--line);border-radius:14px;padding:20px}
+.lamp{width:88px;height:88px;border-radius:50%;background:#2a1717;border:2px solid #452424;transition:none}
+.lamp.on{background:#ff4b4b;border-color:#ff8a8a;box-shadow:0 0 44px #ff4b4b}
+.lamp.g{background:#132a1b;border-color:#20452c}
+.lamp.g.on{background:#3fe07a;border-color:#9ff0bb;box-shadow:0 0 44px #3fe07a}
+
+.ttgrid{display:grid;grid-template-columns:repeat(9,1fr);gap:3px}
+.ttgrid span{aspect-ratio:1;border-radius:4px;display:grid;place-items:center;font-family:var(--mono);font-size:10px;background:var(--panel2);color:var(--muted)}
+.ttgrid span.g{background:rgba(76,195,138,.35);color:#d8f5e6} .ttgrid span.m{background:rgba(242,169,59,.35);color:#fbe7c6} .ttgrid span.b{background:rgba(239,100,97,.45);color:#fde1e0}
+
+#lampbox{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:calc(14px + env(safe-area-inset-bottom));display:none;gap:10px;padding:8px;background:rgba(11,14,18,.85);border:1px solid var(--line);border-radius:999px;z-index:9}
+#lampbox.show{display:flex}
+#lampbox i{width:26px;height:26px;border-radius:50%;background:#2a1717;border:2px solid #452424}
+#lampbox i.on{background:#ff4b4b;border-color:#ff8a8a;box-shadow:0 0 22px #ff4b4b}
+#lampbox i.g{background:#132a1b;border-color:#20452c;display:none}
+#lampbox.two i.g{display:block}
+#lampbox i.g.on{background:#3fe07a;border-color:#9ff0bb;box-shadow:0 0 22px #3fe07a}
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top));transform:translate(-50%,-140%);width:min(92vw,520px);background:#2a2140;border:1px solid var(--vx);border-radius:12px;padding:12px 16px;box-shadow:0 10px 30px rgba(0,0,0,.5);transition:transform .25s ease;z-index:10}
+#toast.show{transform:translate(-50%,0)}
+#toast .t1{font-family:var(--display);font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--vx);font-weight:600}
+#toast .t2{font-size:20px;font-weight:600}
+
+.notes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.notes .opt{font-family:var(--mono);font-size:16px;padding:12px 4px;min-height:50px}
+.chips2{display:flex;flex-wrap:wrap;gap:6px}
+.chip2{border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:14px;background:var(--panel)}
+.chip2.on{border-color:var(--vx);background:rgba(176,124,240,.22);color:#eadcff}
+.items{display:flex;flex-direction:column;gap:6px}
+.it{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel2);border-radius:8px;padding:8px 12px;font-size:15px}
+.it button{color:var(--muted);font-size:18px;padding:0 6px}
+.it.hit{border-left:3px solid var(--good)} .it.miss{border-left:3px solid var(--accent)} .it.wrong{border-left:3px solid var(--bad)}
+.tri{display:flex;gap:12px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:16px;width:100%}
+.tri .no{width:28px;height:28px;border-radius:50%;border:2px solid var(--muted);display:grid;place-items:center;font-family:var(--mono);font-weight:700;flex:none}
+.tri.on{border-color:var(--vx)} .tri.on .no{border-color:var(--vx);background:var(--vx);color:#170f24}
+.acts{display:grid;grid-template-columns:1fr;gap:8px}
+.act{border:1px solid var(--line);border-radius:8px;padding:11px 12px;font-size:15px;text-align:left;background:#1d2420}
+.act:disabled{opacity:.4;cursor:default}
+.logi.a{border-left-color:var(--ky)}
+.reqs{display:flex;flex-direction:column;gap:8px}
+.req{display:flex;gap:12px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:17px}
+.req .box{width:22px;height:22px;border:2px solid var(--muted);border-radius:5px;flex:none;display:grid;place-items:center;font-size:14px;font-weight:700}
+.req.on{border-color:var(--vx)} .req.on .box{border-color:var(--vx);background:var(--vx);color:#170f24}
+.req.hit{border-color:var(--good)} .req.miss{border-color:var(--accent)} .req.wrong{border-color:var(--bad)}
+.req .tag{margin-left:auto;font-size:12px;font-family:var(--mono)}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.stat .v{font-family:var(--mono);font-size:28px;font-weight:700}
+.stat .l{font-size:13px;color:var(--muted)}
+.weak{display:flex;flex-wrap:wrap;gap:6px}
+.weak span{font-family:var(--mono);font-size:14px;background:rgba(239,100,97,.15);border:1px solid rgba(239,100,97,.4);border-radius:6px;padding:4px 8px}
+
+textarea{width:100%;min-height:340px;background:#0b0e12;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px;font-family:var(--mono);font-size:15px;line-height:1.6;resize:vertical}
+.err{color:var(--bad);font-size:14px;min-height:20px}
+.foot{margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.link{color:var(--muted);font-size:13px;text-decoration:underline;padding:8px 0}
+.link.warn{color:var(--bad)}
+#sync{font-size:12px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}.lamp.on{box-shadow:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="lampbox" aria-hidden="true"><i id="lbR"></i><i class="g" id="lbG"></i></div>
+<div id="toast" aria-live="polite"><div class="t1" id="toastT1">Kérés érkezett</div><div class="t2" id="toastText"></div></div>
+<script>
+(function(){
+const app=document.getElementById('app');
+const rnd=n=>Math.floor(Math.random()*n);
+const R=(a,b)=>a+rnd(b-a+1);
+const pick=a=>a[rnd(a.length)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+const range=(a,b)=>{const r=[];for(let i=a;i<=b;i++)r.push(i);return r};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=s=>s.toFixed(1).replace('.',',');
+function mkOpts(correct,cands){const o=[correct];for(const c of cands){if(o.length>=4)break;if(c!=null&&c!==''&&!o.includes(c))o.push(c)}return shuffle(o)}
+function wpick(items,w){const ws=items.map(w),tot=ws.reduce((a,b)=>a+b,0);let x=Math.random()*tot;for(let i=0;i<items.length;i++){x-=ws[i];if(x<=0)return items[i]}return items[items.length-1]}
+
+/* ---------- storage: local + private per-person doc ---------- */
+let store={modes:{},list:null,updated:0};
+try{
+  const raw=JSON.parse(localStorage.getItem('patchcatch')||'null');
+  if(raw&&typeof raw==='object')store=raw;
+  else{const old=JSON.parse(localStorage.getItem('patchedzo')||'null');if(old)['patch','box','shift'].forEach(m=>{if(old[m])store.modes[m]=old[m]})}
+}catch(e){}
+function fixStore(){store.modes=store.modes||{};store.facts=store.facts||{};store.fixMiss=store.fixMiss||{}}
+fixStore();
+const saveLocal=()=>{try{localStorage.setItem('patchcatch',JSON.stringify(store))}catch(e){}};
+let docRef=null,sync='local',writing=Promise.resolve();
+function pushRemote(){
+  if(!docRef)return writing;
+  const body=JSON.parse(JSON.stringify(store));
+  writing=writing.then(()=>docRef.set(body)).then(()=>{sync='synced';syncStatus()}).catch(()=>{sync='local';syncStatus()});
+  return writing;
+}
+function save(){store.updated=Date.now();saveLocal();pushRemote()}
+async function initSync(){
+  try{
+    if(!window.claude||typeof window.claude.use!=='function')return;
+    const [db,user]=await Promise.all([window.claude.use('db'),window.claude.use('user')]);
+    if(!db||!user)return;
+    const id=await user.id();if(!id)return;
+    docRef=db.doc('data/users/'+id+'/patchcatch');
+    const t=setTimeout(()=>{sync='offline';syncStatus()},10000);
+    const snap=await docRef.get();clearTimeout(t);
+    if(snap.exists){
+      const r=snap.data()||{};
+      if((r.updated||0)>(store.updated||0)){store=JSON.parse(JSON.stringify(r));fixStore();saveLocal();if(!S&&screen==='home')home()}
+      else if((store.updated||0)>(r.updated||0))await pushRemote();
+    }else if(store.updated)await pushRemote();
+    sync='synced';syncStatus();
+  }catch(e){sync='local';syncStatus()}
+}
+function syncStatus(){const el=document.getElementById('sync');if(el)el.textContent=sync==='synced'?'Mentve a fiókodba, minden eszközön':sync==='offline'?'Most csak ebben a böngészőben mentve':'Ebben a böngészőben mentve'}
+
+/* ---------- channel list ---------- */
+const DEFAULT_LIST=['Kick In','Kick Out','Snare Top','Snare Bot','Hi-Hat','Tom 1','Tom 2','Floor Tom','OH L','OH R','Bass DI','Bass Mic','Gtr 1','Gtr 2','Ac Gtr','Keys L','Keys R','Sax','Vox Lead','Vox 2','Vox 3','PB L','PB R','Talkback'];
+const EXTRA=['Vox 4','Perc','Shaker','Gtr 3','Synth','Kick Sub','Cajon','Trp','Ambient L','Ambient R'];
+const POOL=['Kick In','Kick Out','Kick Sub','Snare Top','Snare Bot','Hi-Hat','Tom 1','Tom 2','Floor Tom','OH L','OH R','Cajon','Perc','Shaker','Bass DI','Bass Mic','Gtr 1','Gtr 2','Gtr 3','Ac Gtr','Keys L','Keys R','Synth','Sax','Trp','Vox Lead','Vox 2','Vox 3','Vox 4','PB L','PB R','Talkback'];
+function grpOf(n){const s=n.toLowerCase();
+  if(/kick|snare|tom|hat|\boh\b|over|dob|ride|crash|perc|cajon|drum|shaker/.test(s))return 'dr';
+  if(/bass|basszus/.test(s))return 'bs';
+  if(/gtr|git|guit/.test(s))return 'gt';
+  if(/key|synth|piano|zongora|sax|trp|trumpet|horn|org/.test(s))return 'ky';
+  if(/vox|voc|ének|enek/.test(s))return 'vx';
+  return 'mi';}
+const BAND_UNITS=[
+  [['Kick In'],1],[['Kick Out'],3],[['Snare Top'],1],[['Snare Bot'],3],[['Hi-Hat'],2],[['Tom 1'],2],[['Tom 2'],3],[['Floor Tom'],2],[['OH L','OH R'],1],
+  [['Perc'],3],[['Cajon'],3],
+  [['Bass DI'],1],[['Bass Mic'],3],
+  [['Gtr 1'],1],[['Gtr 2'],2],[['Ac Gtr'],3],
+  [['Keys L','Keys R'],2],[['Synth'],3],
+  [['Sax'],3],[['Trp'],3],
+  [['Vox Lead'],1],[['Vox 2'],2],[['Vox 3'],3],[['Vox 4'],3],
+  [['PB L','PB R'],3],[['Click'],3],
+  [['Talkback'],3],[['Ambient L','Ambient R'],3]];
+/* realistic band in stage order: drums, perc, bass, guitars, keys, horns, vocals, playback */
+function genBand(n){
+  const units=BAND_UNITS.map((u,i)=>({i,names:u[0],score:u[1]===1?Math.random()*.5:u[1]+Math.random()*1.6})).sort((a,b)=>a.score-b.score);
+  const sel=[];let tot=0;
+  for(const u of units)if(tot+u.names.length<=n){sel.push(u);tot+=u.names.length}
+  return sel.sort((a,b)=>a.i-b.i).flatMap(u=>u.names);
+}
+function randomList(){return genBand(24)}
+function memListFor(L){
+  const n=MEM_N[L],src=store.memSrc||'own';
+  if(src==='own'){if(store.listMode==='random')return genBand(n);const full=getList();return full.slice(0,Math.min(n,full.length))}
+  const b=genBand(n);return src==='mess'?shuffle(b):b;
+}
+function getList(){
+  if(store.listMode==='random')return randomList();
+  const src=Array.isArray(store.list)&&store.list.length>=6?store.list:DEFAULT_LIST;
+  const seen={};return src.map(x=>{let n=String(x).trim();if(seen[n]){seen[n]++;n=n+' ('+seen[n]+')'}else seen[n]=1;return n});
+}
+
+/* ---------- modes ---------- */
+const MODES={
+  calc10:{name:'Fejszámolás · 10 feladat',max:5,n:10,c:'--accent'},
+  sprint:{name:'Fejszámolás · 120 mp',max:5,n:9999,c:'--accent'},
+  tt10:{name:'Szorzótábla 10-ig',max:1,n:20,c:'--cy'},
+  ttx:{name:'Szorzótábla tovább',max:1,n:20,c:'--cy'},
+  span:{name:'Számmemória',max:1,n:99,c:'--vx'},
+  blink:{name:'Lámpa számolás (gyakorló)',desc:'Villan egy lámpa, mondd meg, hányszor. Később két lámpa, és csak a pirosat számolod.',max:5,n:8,c:'--dr'},
+  trans:{name:'Transzponálás',desc:'Félhangok, hangnemváltás, capo, B♭ és E♭ hangszerek. Melyik hang szól?',max:5,n:10,c:'--gt'},
+  intv:{name:'Hangközök',desc:'Hány félhang, melyik hangköz, mi van egy nagy terccel feljebb vagy egy kvarttal lejjebb.',max:5,n:10,c:'--gt'},
+  mem:{name:'Lista memória',desc:'Megtanulod a csatornalistát, aztán fejből: mi van a CH 9-en, hányas a Bass DI?',max:5,n:10,c:'--gt'},
+  patch:{name:'Patch csere',desc:'Cserék, körbeforgatás, áthelyezés, beszúrás, törlés. Mi hova csúszott?',max:6,n:10,c:'--accent'},
+  chain:{name:'Jelút',desc:'Patch több ponton: színpadon a stageboxban és a pulton is. Melyik faderen szól?',max:5,n:10,c:'--dr'},
+  box:{name:'Stagebox számolás',desc:'Box-méretekből és kezdő inputból: melyik box, hányadik csati, melyik input.',max:5,n:10,c:'--bs'},
+  fix:{name:'Hibakereső',desc:'Nem szól, recseg, zúg, monitorhiba, kieső stagebox. Ellenőrizz okosan, és tanulj a tippekből.',max:4,n:8,c:'--ky'},
+  shift:{name:'Műszak 1: kérések',desc:'Stagebox-kérdések közben monitorkérések jönnek. A végén vissza kell mondanod őket.',max:5,n:8,c:'--vx'},
+  shiftL:{name:'Műszak: lámpa',desc:'Stagebox-kérdések közben a sarokban időnként villan egy lámpa. A végén meg kell mondanod, hányszor. 3. szinttől két lámpa, és csak a pirosat számolod.',max:3,n:8,c:'--dr'},
+  shift2:{name:'Műszak 2: kérések és hibák',desc:'Munka közben kérések és hibabejelentések jönnek. Nem oldod meg rögtön: a végén fejből visszaidézed, sorrendet állítasz, és hibakereséssel megoldod őket.',max:3,n:8,c:'--vx'}
+};
+const info=m=>{const f=store.modes[m]||{level:1};return {...f,level:Math.min(Math.max(f.level||1,1),MODES[m].max)}};
+
+/* ---------- ARITHMETIC ---------- */
+const SYM={add:'+',sub:'−',mul:'×',div:'÷'};
+function genOp(op,L){
+  let a,b;
+  if(op==='add'){
+    if(L===1){a=R(2,9);b=R(2,9)}
+    else if(L===2){do{a=R(11,89);b=R(3,9)}while(a%10+b<10)}
+    else if(L===3){do{a=R(12,79);b=R(12,79)}while(a+b>99||(a%10+b%10<10&&Math.random()<.6))}
+    else if(L===4){do{a=R(25,99);b=R(25,99)}while(a+b<100)}
+    else{a=R(101,499);b=R(12,99)}
+    return {op,a,b,ans:a+b};
+  }
+  if(op==='sub'){
+    if(L===1){do{a=R(11,18);b=R(3,9)}while(a%10>=b)}
+    else if(L===2){do{a=R(21,95);b=R(3,9)}while(a%10>=b)}
+    else if(L===3){do{a=R(31,98);b=R(12,a-5)}while(a%10>=b%10&&Math.random()<.6)}
+    else if(L===4){do{a=R(101,199);b=R(12,99)}while(a%10>=b%10&&Math.random()<.6)}
+    else{a=R(201,500);b=R(45,a-20)}
+    return {op,a,b,ans:a-b};
+  }
+  const m=()=>L===1?[R(2,5),R(2,9)]:L===2?[R(3,9),R(3,9)]:L===3?[R(11,19),R(2,9)]:L===4?[R(21,49),R(3,9)]:(Math.random()<.5?[R(51,99),R(3,9)]:[R(12,19),R(12,19)]);
+  let [x,y]=m();
+  if(op==='mul'){if(L<=2&&Math.random()<.5)[x,y]=[y,x];return {op,a:x,b:y,ans:x*y}}
+  let d=y,q=x;if(L<=2&&Math.random()<.5){d=x;q=y}
+  return {op:'div',a:q*d,b:d,ans:q};
+}
+function hintOp(p){
+  const {op,a,b,ans}=p;
+  if(op==='add'){
+    const x=Math.max(a,b),y=Math.min(a,b);
+    if(x<10){const n=10-x;return y>n?`Töltsd fel tízre: ${x}+${n}=10, maradt ${y-n} → ${ans}`:`${x}+${y}=${ans}`}
+    if(y<10){const n=10-x%10;return y>n?`Előbb tízesre: ${x}+${n}=${x+n}, maradt ${y-n} → ${ans}`:`${x}+${y}=${ans}`}
+    if(y%10>=7||x%10>=7){const z=y%10>=7?y:x,o=z===y?x:y,T=Math.ceil(z/10)*10;return `Kerekíts: ${z} helyett ${T}. ${o}+${T}=${o+T}, aztán −${T-z} → ${ans}`}
+    const t=Math.floor(y/10)*10;return y%10?`Előbb a tízesek: ${x}+${t}=${x+t}, aztán +${y%10} → ${ans}`:`${x}+${y}=${ans}`;
+  }
+  if(op==='sub'){
+    if(b<10){const u=a%10;if(u===0)return `${a}−10=${a-10}, aztán +${10-b} vissza → ${ans}`;return b>u?`Előbb a tízesig: ${a}−${u}=${a-u}, aztán −${b-u} → ${ans}`:`${a}−${b}=${ans}`}
+    if(b%10>=7){const T=Math.ceil(b/10)*10;return `Kerekíts: ${a}−${T}=${a-T}, aztán +${T-b} vissza → ${ans}`}
+    if(a-b<=30&&b%10!==0){const c=Math.ceil(b/10)*10;return `Számolj fölfelé: ${b}→${c}: +${c-b}, ${c}→${a}: +${a-c}, együtt ${ans}`}
+    const t=Math.floor(b/10)*10;return b%10?`Előbb a tízesek: ${a}−${t}=${a-t}, aztán −${b%10} → ${ans}`:`${a}−${b}=${ans}`;
+  }
+  if(op==='mul'){
+    const x=Math.max(a,b),y=Math.min(a,b);
+    if(y>=10)return `${x}×${y} = ${x}×10 + ${x}×${y-10} = ${x*10}+${x*(y-10)} = ${ans}`;
+    if(x>=10){const t=Math.floor(x/10)*10,u=x%10;return u?`Bontsd: ${t}×${y} + ${u}×${y} = ${t*y}+${u*y} = ${ans}`:`${t}×${y} = ${ans}`}
+    if(x===9||y===9){const o=x===9?y:x;return `×9 = ×10 mínusz egyszer: ${o*10}−${o} = ${ans}`}
+    if(x===5||y===5){const o=x===5?y:x;return `×5 = a ×10 fele: ${o*10} fele ${ans}`}
+    if(x===8||y===8){const o=x===8?y:x;return `×8 = háromszor duplázol: ${o}→${o*2}→${o*4}→${ans}`}
+    if(x===4||y===4){const o=x===4?y:x;return `×4 = kétszer duplázol: ${o}→${o*2}→${ans}`}
+    if(x>=6)return `${y}×5 + ${y}×${x-5} = ${y*5}+${y*(x-5)} = ${ans}`;
+    return `${x}×${y-1} + ${x} = ${x*(y-1)}+${x} = ${ans}`;
+  }
+  const n=a,d=b,q=ans;
+  if(q>=10){const t=Math.floor(q/10)*10,rest=n-d*t;return rest?`Szorzásként: ?×${d}=${n}. ${d}×${t}=${d*t}, maradt ${rest} = ${d}×${q-t} → ${q}`:`${d}×${t}=${n} → ${q}`}
+  return `Szorzásként: ?×${d}=${n} → ${q}, mert ${q}×${d}=${n}`;
+}
+const CQ=(big,num,expl,word)=>({kind:'calc',at:'num',auto:true,ask:word?'Számold ki fejben':'Számold ki',big,num,expl,right:'Helyes: '+num,phase:'q',mono:!word,word:!!word});
+function genCtx(L){
+  const t=pick(L>=3?['range','free','bpm','bpm8','db','sc','range']:['range','free','sc']);
+  if(t==='range'){const s=R(1,L>=3?57:33),k=pick([4,6,8,12,16,24]);return CQ(`Az Input ${s}-től ${k} csatorna jön sorban. Melyik inputon van az utolsó?`,s+k-1,`${s} + ${k} − 1 = ${s+k-1} (az első is számít, ezért kell a −1)`,true)}
+  if(t==='free'){const tot=pick([16,24,32,48,64]),u=R(5,tot-3);return CQ(`${tot} csatornás pult, ${u} csatorna foglalt. Hány szabad?`,tot-u,hintOp({op:'sub',a:tot,b:u,ans:tot-u}),true)}
+  if(t==='bpm'){const b=pick([60,75,80,100,120,125,150]);return CQ(`${b} BPM: hány ms egy negyed?`,60000/b,`60 000 ÷ ${b} = ${60000/b} ms`,true)}
+  if(t==='bpm8'){const b=pick([60,75,100,120,150]);return CQ(`${b} BPM: hány ms egy nyolcad?`,30000/b,`Negyed: 60 000 ÷ ${b} = ${60000/b} ms, a nyolcad ennek a fele: ${30000/b} ms`,true)}
+  if(t==='db'){const a=pick([3,6,9,10,12,15,18,20,24]),b=a+pick([3,6,8,9,12,14,16,20]);return CQ(`Mennyi a különbség −${a} dB és −${b} dB között?`,b-a,`${b} − ${a} = ${b-a} dB`,true)}
+  const z=R(2,5),m=pick([15,20,25,30,35,40,45]);return CQ(`${z} zenekar, mindegyiknek ${m} perc soundcheck. Összesen hány perc?`,z*m,hintOp({op:'mul',a:m,b:z,ans:z*m}),true);
+}
+function genCalc(L){
+  const r=Math.random();
+  const ops=L===1?['add','sub','add','sub','mul']:['add','sub','mul','div'];
+  if((L===1&&r<.8)||(L>1&&r<.5)){const p=genOp(pick(ops),L);return CQ(`${p.a} ${SYM[p.op]} ${p.b}`,p.ans,hintOp(p))}
+  if(L===1||r<.65){
+    const op=pick(['add','sub','mul']),p=genOp(op,Math.max(1,L-1));
+    if(op==='add')return CQ(`? + ${p.b} = ${p.ans}`,p.a,`${p.ans} − ${p.b} = ${p.a}`);
+    if(op==='sub')return CQ(`${p.a} − ? = ${p.ans}`,p.b,`${p.a} − ${p.ans} = ${p.b}`);
+    return CQ(`? × ${p.b} = ${p.ans}`,p.a,`${p.ans} ÷ ${p.b} = ${p.a}`);
+  }
+  if(r<.75){
+    let a,b,c;if(L===2){a=R(5,20);b=R(3,9);c=R(2,9)}else if(L===3){a=R(12,40);b=R(6,29);c=R(5,19)}else{a=R(25,80);b=R(12,49);c=R(11,39)}
+    c=Math.min(c,a+b-1);
+    return CQ(`${a} + ${b} − ${c}`,a+b-c,`${a}+${b}=${a+b}, aztán −${c} → ${a+b-c}`);
+  }
+  if(r<.85){
+    const x=L<=2?R(12,49):L===3?R(26,99):R(51,249);
+    if(Math.random()<.5){const t=Math.floor(x/10)*10;return CQ(`2 × ${x}`,2*x,`Duplázás részenként: 2×${t}=${2*t}, 2×${x%10}=${2*(x%10)} → ${2*x}`)}
+    return CQ(`${2*x} ÷ 2`,x,`Felezés: ${2*x} fele ${x}`);
+  }
+  return genCtx(L);
+}
+
+/* ---------- TIMES TABLE ---------- */
+const FACTS10=[];for(let a=2;a<=10;a++)for(let b=a;b<=10;b++)FACTS10.push([a,b]);
+const FACTSX=[];for(let a=11;a<=19;a++)for(let b=2;b<=9;b++)FACTSX.push([b,a]);for(let a=11;a<=20;a++)FACTSX.push([a,a]);
+const fkey=(a,b)=>Math.min(a,b)+'x'+Math.max(a,b);
+function fstat(k){return store.facts[k]}
+function fweight(f){const s=fstat(fkey(f[0],f[1]));if(!s)return 3;const acc=s.ok/s.n;return 1+(1-acc)*6+(s.t>3?2:0)+(s.n<2?1:0)}
+function genTT(set){
+  const facts=set==='tt10'?FACTS10:FACTSX;
+  let f,t=0;do{f=wpick(facts,fweight)}while(fkey(f[0],f[1])===S.lastFact&&t++<10);
+  S.lastFact=fkey(f[0],f[1]);
+  let [a,b]=Math.random()<.5?[f[0],f[1]]:[f[1],f[0]];
+  const p=a*b;
+  if(Math.random()<.2&&a!==b){return {kind:'tt',at:'num',auto:true,ask:'Osztás',big:`${p} ÷ ${a}`,num:b,fact:fkey(a,b),expl:hintOp({op:'div',a:p,b:a,ans:b}),right:'Helyes: '+b,phase:'q',mono:true}}
+  return {kind:'tt',at:'num',auto:true,ask:'Szorzás',big:`${a} × ${b}`,num:p,fact:fkey(a,b),expl:hintOp({op:'mul',a,b,ans:p}),right:'Helyes: '+p,phase:'q',mono:true};
+}
+function factClass(a,b){const s=fstat(fkey(a,b));if(!s)return '';const acc=s.ok/s.n;if(acc>=.9&&s.t<=3&&s.n>=2)return 'g';if(acc<.7)return 'b';return 'm'}
+function ttGrid(){let h='<div class="ttgrid" aria-label="Szorzótábla, színezve aszerint, mennyire megy">';for(let a=2;a<=10;a++)for(let b=2;b<=10;b++)h+=`<span class="${factClass(a,b)}">${a*b}</span>`;return h+'</div>'}
+function weakFacts(set,n){const facts=set==='tt10'?FACTS10:FACTSX;return facts.map(f=>({f,s:fstat(fkey(f[0],f[1]))})).filter(x=>x.s&&(x.s.ok/x.s.n<.9||x.s.t>3)).sort((x,y)=>(x.s.ok/x.s.n)-(y.s.ok/y.s.n)||y.s.t-x.s.t).slice(0,n).map(x=>`${x.f[0]}×${x.f[1]}=${x.f[0]*x.f[1]}`)}
+
+/* ---------- MUSIC THEORY ---------- */
+const NN_INT=['C','C♯','D','E♭','E','F','F♯','G','A♭','A','B♭','B'];
+const md=i=>((i%12)+12)%12;
+function nn(i){let n=NN_INT[md(i)];if(store.noteNames==='hu'){if(n==='B♭')n='B';else if(n==='B')n='H'}return n}
+function btnName(i){const b=['C','C♯/D♭','D','D♯/E♭','E','F','F♯/G♭','G','G♯/A♭','A','A♯/B♭','B'];let n=b[i];if(store.noteNames==='hu'){if(i===10)n='A♯/B';if(i===11)n='H'}return n}
+const IV=['tiszta prím','kis szekund','nagy szekund','kis terc','nagy terc','tiszta kvart','tritónusz','tiszta kvint','kis szext','nagy szext','kis szeptim','nagy szeptim','oktáv'];
+function npath(a,k){const st=k>0?1:-1,out=[nn(a)];if(Math.abs(k)>7)return `${nn(a)} ${k>0?'+':'−'} ${Math.abs(k)} félhang = ${nn(a+k)}`;for(let i=1;i<=Math.abs(k);i++)out.push(nn(a+i*st));return out.join(' → ')}
+const NQ=(big,note,expl,word,ask)=>({kind:'music',at:'note',ask:ask||'Melyik hang?',big,note:md(note),expl,right:'Helyes: '+nn(note),phase:'q',mono:!word,word:!!word});
+const KEYS=[0,2,4,5,7,9,10,3],DEG=[[2,'m'],[4,'m'],[5,''],[7,''],[9,'m']];
+function genTrans(L){
+  const lv=L===5?R(2,4):L;
+  if(lv===1){const a=pick([0,2,4,5,7,9,11]),k=R(1,5);return NQ(`${nn(a)} + ${k} félhang`,a+k,npath(a,k))}
+  if(lv===2){const a=rnd(12),k=R(1,7)*(Math.random()<.5?1:-1);return NQ(`${nn(a)} ${k>0?'+':'−'} ${Math.abs(k)} félhang`,a+k,npath(a,k))}
+  if(lv===3){
+    const from=pick(KEYS);let to;do{to=pick(KEYS)}while(to===from);
+    const [d,qq]=pick(DEG),ch=from+d,diff=md(to-from),dd=diff>6?diff-12:diff;
+    return NQ(`A dal ${nn(from)}-dúrban van, az új hangnem ${nn(to)}-dúr. Mi lesz a(z) ${nn(ch)}${qq} akkord helyett?`,ch+dd,
+      `${nn(from)} → ${nn(to)}: ${dd>0?'+':'−'}${Math.abs(dd)} félhang. ${nn(ch)} ${dd>0?'+':'−'} ${Math.abs(dd)} = ${nn(ch+dd)}${qq}`,true,'Melyik akkord (alaphang)?');
+  }
+  const t=pick(['capo','capoRev','bb','eb']);
+  if(t==='capo'){const n=R(1,5),sh=pick([0,9,7,4,2]);return NQ(`Capo a ${n}. bundon, a gitáros ${nn(sh)} fogást fog. Mi szól valójában?`,sh+n,`A capo bundonként fél hangot emel: ${nn(sh)} + ${n} = ${nn(sh+n)}`,true)}
+  if(t==='capoRev'){const n=R(1,5),key=rnd(12);return NQ(`A dal hangneme ${nn(key)}-dúr, a gitáros capót tesz a ${n}. bundra. Milyen fogással játssza?`,key-n,`Visszafelé számolsz: ${nn(key)} − ${n} = ${nn(key-n)}`,true,'Melyik fogás?')}
+  if(t==='bb'){const w=rnd(12);return NQ(`${nn(10)} trombita: a kottában ${nn(w)} áll. Melyik hang szól?`,w-2,`${nn(10)} hangszer: 2 félhanggal mélyebben szól, mint ami a kottában van. ${nn(w)} − 2 = ${nn(w-2)}`,true)}
+  const w=rnd(12);return NQ(`${nn(3)} altszaxofon: a kottában ${nn(w)} áll. Melyik hang szól?`,w+3,`${nn(3)} hangszer: 9 félhanggal mélyebben szól, ami hangnévben ugyanaz, mint +3. ${nn(w)} + 3 = ${nn(w+3)}`,true);
+}
+function genIntv(L){
+  const lv=L===5?R(2,4):L,a=rnd(12);
+  if(lv===1){const k=R(1,5);return {kind:'music',at:'num',ask:'Hány félhang felfelé?',big:`${nn(a)} → ${nn(a+k)}`,num:k,ph:'félhang',expl:npath(a,k),right:'Helyes: '+k,phase:'q',mono:true}}
+  if(lv===2){const k=R(1,lv===2&&L<5?7:12),correct=IV[k];
+    return {kind:'music',at:'opt',ask:'Milyen hangköz felfelé?',big:`${nn(a)} → ${nn(a+k)}`,correct,options:mkOpts(correct,[IV[k-1],IV[k+1],IV[k-2],IV[k+2],...shuffle(IV.slice(1))]),expl:`${npath(a,k)}: ${k} félhang = ${correct}`,right:'Helyes: '+correct,phase:'q',mono:true}}
+  const k=R(1,lv===3?9:12);
+  if(lv===3)return NQ(`${nn(a)} + ${IV[k]}`,a+k,`${IV[k]} = ${k} félhang. ${npath(a,k)}`);
+  return NQ(`${nn(a)} − ${IV[k]}`,a-k,`${IV[k]} = ${k} félhang lefelé. ${npath(a,-k)}`);
+}
+
+/* ---------- BLINK ---------- */
+const BL=[null,{r:[3,6],g:[0,0],gap:[520,900]},{r:[5,9],g:[0,0],gap:[360,760]},{r:[7,12],g:[0,0],gap:[260,640]},{r:[5,9],g:[3,7],gap:[260,600]},{r:[7,12],g:[4,8],gap:[200,500]}];
+function genBlink(L){
+  const c=BL[L],nr=R(c.r[0],c.r[1]),ng=c.g[1]?R(c.g[0],c.g[1]):0;
+  const seq=shuffle(Array(nr).fill('r').concat(Array(ng).fill('g')));
+  let t=0;const ev=seq.map(l=>{t+=R(c.gap[0],c.gap[1]);return {l,t}});
+  return {kind:'blink',at:'num',ask:ng?'Hányszor villant a PIROS?':'Hányszor villant a lámpa?',big:'',num:nr,ev,two:ng>0,phase:'ready',expl:`${nr} piros${ng?' és '+ng+' zöld':''} villanás volt.`,right:'Helyes: '+nr};
+}
+
+/* ---------- LIST MEMORY ---------- */
+const MEM_N=[null,8,12,16,20,24];
+function genMem(){
+  const list=S.memList,n=list.length,k=1+rnd(n);
+  const ctx=[k-1,k,k+1].filter(x=>x>=1&&x<=n).map(x=>'CH '+x+': '+list[x-1]).join(' · ');
+  if(S.level>=2&&Math.random()<.5)
+    return {kind:'mem',at:'num',ask:'Hányas csatorna?',big:list[k-1],num:k,ph:'csatorna',right:'Helyes: CH '+k,expl:ctx,phase:'q'};
+  const correct=list[k-1];
+  const cands=shuffle([k-1,k+1,k-2,k+2].filter(x=>x>=1&&x<=n)).map(x=>list[x-1]).concat(shuffle(list));
+  return {kind:'mem',at:'opt',ask:'Mi van ezen a csatornán?',big:'CH '+k,correct,options:mkOpts(correct,cands),right:'Helyes: '+correct,expl:ctx,phase:'q'};
+}
+
+/* ---------- PATCH ---------- */
+const PATCH_LV=[null,{n:8,ops:['s']},{n:12,ops:['s','i']},{n:12,ops:['s','s'],chain:true},{n:16,ops:['r','m']},{n:16,ops:['m','s'],chain:true,hide:true},{n:16,ops:['r','m','i'],hide:true}];
+function genPatch(L){
+  const cfg=PATCH_LV[L],full=getList(),n=Math.min(cfg.n,full.length);
+  const orig=full.slice(0,n);let arr=orig.slice();const ops=[];
+  const extra=shuffle(EXTRA.filter(x=>!full.includes(x)));
+  const rp=(len,ex=[])=>{let p,t=0;do{p=1+rnd(len)}while(ex.includes(p)&&t++<200);return p};
+  cfg.ops.forEach((t,k)=>{
+    const len=arr.length,prev=ops[k-1];
+    const sh=prev?[prev.a,prev.b,prev.c].filter(x=>x&&x<=len):[];
+    const first=()=>(cfg.chain&&sh.length)?pick(sh):rp(len);
+    if(t==='s'){const a=first(),b=rp(len,[a,...(cfg.chain?sh:[])]);[arr[a-1],arr[b-1]]=[arr[b-1],arr[a-1]];ops.push({a,b,txt:`Csere: <b>CH ${a}</b> ↔ <b>CH ${b}</b>`})}
+    else if(t==='r'){const a=rp(len),b=rp(len,[a]),c=rp(len,[a,b]);const ta=arr[a-1],tb=arr[b-1],tc=arr[c-1];arr[b-1]=ta;arr[c-1]=tb;arr[a-1]=tc;
+      ops.push({a,b,c,txt:`Körbe: <b>${a}</b> → <b>${b}</b> → <b>${c}</b> → <b>${a}</b>`,hint:`a CH ${a} tartalma átkerül a CH ${b} helyére, és így tovább`})}
+    else if(t==='m'){const a=first();const b=rp(len,[a,a-1,a+1]);const x=arr.splice(a-1,1)[0];arr.splice(b-1,0,x);
+      ops.push({a,b,txt:`Áthelyezés: <b>CH ${a}</b> → <b>CH ${b}</b>`,hint:a<b?'a köztük lévők száma eggyel csökken':'a köztük lévők száma eggyel nő'})}
+    else{if(Math.random()<.5&&extra.length){const nm=extra.pop(),a=rp(len);arr.splice(a-1,0,nm);ops.push({a,txt:`Beszúrás: <b>${esc(nm)}</b> → <b>CH ${a}</b>`,hint:`a régi CH ${a} és ami utána jön, mind eggyel nagyobb számra kerül`})}
+      else{const a=rp(len);arr.splice(a-1,1);ops.push({a,txt:`Törlés: <b>CH ${a}</b> kikerül`,hint:'ami utána jön, mind eggyel kisebb számra kerül'})}}
+  });
+  const L2=arr.length,touched=range(1,L2).filter(p=>arr[p-1]!==orig[p-1]);
+  if(!touched.length)return genPatch(L);
+  const posNow=x=>arr.indexOf(x)+1,origPos=x=>orig.indexOf(x)+1,moved=arr.filter(x=>posNow(x)!==origPos(x));
+  let q;
+  if(Math.random()<.5){const p=Math.random()<.85?pick(touched):1+rnd(L2),correct=arr[p-1];
+    q={at:'opt',ask:'Mi van most ezen a csatornán?',big:'CH '+p,correct,options:mkOpts(correct,[orig[p-1],arr[p-2],arr[p],orig[p-2],orig[p],...shuffle(arr)]),right:'Helyes: '+correct}}
+  else{const x=moved.length&&Math.random()<.85?pick(moved):pick(arr),pn=posNow(x),po=origPos(x),correct='CH '+pn;
+    const cands=[po,pn-1,pn+1,po+1,po-1,...shuffle(touched),...shuffle(range(1,L2))].filter(v=>v>=1&&v<=L2).map(v=>'CH '+v);
+    q={at:'opt',ask:'Melyik csatornán van most?',big:x,correct,options:mkOpts(correct,cands),right:'Helyes: '+correct}}
+  q.expl='Most: '+touched.slice(0,10).map(p=>'CH '+p+' = '+arr[p-1]).join(' · ')+(touched.length>10?' …':'');
+  return Object.assign(q,{kind:'patch',list:orig,ops,hide:!!cfg.hide,phase:cfg.hide?'memo':'q'});
+}
+
+/* ---------- SIGNAL CHAIN ---------- */
+const CHAIN_LV=[null,
+  {n:12,sizes:()=>[16],start:()=>1,ops:['ms']},
+  {n:12,sizes:()=>[16],start:()=>1,ops:['ms','cs']},
+  {n:16,sizes:()=>[16,8],start:()=>1,ops:['ps','cs'],qc:true},
+  {n:16,sizes:()=>pick([[16,8],[12,12],[8,16]]),start:()=>pick([9,17]),ops:['mv','cs'],qc:true},
+  {n:20,sizes:()=>pick([[16,8],[12,12],[8,8,8]]),start:()=>pick([9,17,25]),ops:['ps','mv','cs'],qc:true,hide:true}];
+function genChain(L){
+  const cfg=CHAIN_LV[L],full=getList(),n=Math.min(cfg.n,full.length);
+  const list=full.slice(0,n),sizes=cfg.sizes(),start=cfg.start(),P=sizes.reduce((a,b)=>a+b,0);
+  const m=[null];for(let g=1;g<=P;g++)m.push(g<=n?list[g-1]:null);
+  const inp=[null];for(let k=1;k<=n;k++)inp.push(start+k-1);
+  const pl=g=>{let s=0;for(let j=0;j<sizes.length;j++){if(g<=s+sizes[j])return 'SB'+(j+1)+'/'+(g-s);s+=sizes[j]}return '?'};
+  const ops=[];
+  shuffle(cfg.ops).forEach(t=>{
+    const occ=range(1,P).filter(g=>m[g]),free=range(1,P).filter(g=>!m[g]);
+    if(t==='ms'){const [g1,g2]=shuffle(occ);const a=m[g1],b=m[g2];m[g1]=b;m[g2]=a;ops.push({txt:`Színpad: <b>${esc(a)}</b> és <b>${esc(b)}</b> kábele felcserélve`})}
+    else if(t==='ps'){const [g1,g2]=shuffle(occ);[m[g1],m[g2]]=[m[g2],m[g1]];ops.push({txt:`Színpad: <b>${pl(g1)}</b> ↔ <b>${pl(g2)}</b> átdugva`})}
+    else if(t==='mv'&&free.length){const g1=pick(occ),g2=pick(free),x=m[g1];m[g2]=x;m[g1]=null;ops.push({txt:`Színpad: <b>${esc(x)}</b> átdugva ide: <b>${pl(g2)}</b>`,hint:'szabad portra; a pulton ehhez nem nyúltak'})}
+    else{const [a,b]=shuffle(range(1,n));[inp[a],inp[b]]=[inp[b],inp[a]];ops.push({txt:`Pult: <b>CH ${a}</b> ↔ <b>CH ${b}</b> input patch csere`})}
+  });
+  const portOf=x=>m.indexOf(x);
+  const chOfInput=i=>{for(let k=1;k<=n;k++)if(inp[k]===i)return k;return 0};
+  const chOf=x=>{const g=portOf(x);return g>0?chOfInput(start+g-1):0};
+  const whatOn=k=>m[inp[k]-start+1]||null;
+  const NONE='Semmi (üres port)',NOCH='Egyiken sem';
+  const touchedCh=range(1,n).filter(k=>whatOn(k)!==list[k-1]),touchedNames=list.filter((x,i)=>chOf(x)!==i+1);
+  if(!touchedCh.length&&!touchedNames.length)return genChain(L);
+  const path=x=>{const g=portOf(x),c=chOf(x);return `${x} → ${pl(g)} → Input ${start+g-1} → ${c?'CH '+c:'nincs csatornára patchelve'}`};
+  let q;const r=Math.random();
+  if(cfg.qc&&r<.3&&touchedNames.length){const x=pick(touchedNames),ans=start+portOf(x)-1;
+    q={at:'num',ask:'Melyik konzol inputra érkezik most?',big:x,num:ans,ph:'input szám',right:'Helyes: Input '+ans,expl:path(x)}}
+  else if(r<.65&&touchedCh.length){const k=Math.random()<.85?pick(touchedCh):1+rnd(n),w=whatOn(k),correct=w||NONE;
+    const cands=[list[k-1],...touchedNames,...touchedCh.map(whatOn).filter(Boolean),...(L>=4?[NONE]:[]),...shuffle(list)];
+    q={at:'opt',ask:'Mi szól most ezen a faderen?',big:'CH '+k,correct,options:mkOpts(correct,cands),right:'Helyes: '+correct,expl:`CH ${k} ← Input ${inp[k]} ← ${pl(inp[k]-start+1)} ← ${w||'üres'}`}}
+  else{const x=touchedNames.length&&Math.random()<.85?pick(touchedNames):pick(list),c=chOf(x),correct=c?'CH '+c:NOCH,io=list.indexOf(x)+1;
+    const cands=['CH '+io,...touchedCh.map(k=>'CH '+k),...(L>=4?[NOCH]:[]),...shuffle(range(1,n)).map(k=>'CH '+k)];
+    q={at:'opt',ask:'Melyik faderen szól most?',big:x,correct,options:mkOpts(correct,cands),right:'Helyes: '+correct,expl:path(x)}}
+  const setup=`<div class="boxes">${sizes.map((z,j)=>`<span class="sb"><b>SB${j+1}</b> · ${z} ch</span>`).join('')}</div>
+    <p class="small muted">Alapállapot: CH 1 = SB1/1 = Input ${start}, és így tovább sorban.${start>1?` Input 1–${start-1}: lokál.`:''}</p>`;
+  return Object.assign(q,{kind:'chain',list,ops,setup,hide:!!cfg.hide,phase:cfg.hide?'memo':'q'});
+}
+
+/* ---------- STAGEBOX ---------- */
+const mixed=k=>Array.from({length:k},()=>pick([8,12,16,24]));
+const BOX_LV=[null,
+  {sizes:()=>[16,16,16],start:()=>1,dirs:['b2i']},
+  {sizes:()=>[16,16,16],start:()=>1,dirs:['b2i','i2b']},
+  {sizes:()=>mixed(3),start:()=>1,dirs:['b2i','i2b']},
+  {sizes:()=>mixed(3),start:()=>pick([9,17,25]),dirs:['b2i','i2b']},
+  {sizes:()=>mixed(4),start:()=>pick([9,13,17,33]),dirs:['b2i','i2b']}];
+function genBox(L){
+  const cfg=BOX_LV[L],sizes=cfg.sizes(),start=cfg.start();
+  const ranges=[];let s=start;sizes.forEach(z=>{ranges.push([s,s+z-1]);s+=z});
+  const total=s-start,dir=pick(cfg.dirs);
+  const expl=ranges.map((r,j)=>'SB'+(j+1)+': '+r[0]+'–'+r[1]).join(' · ');
+  const base={kind:'box',sizes,start,expl,phase:'q',mono:true};
+  if(dir==='b2i'){const j=rnd(sizes.length),c=1+rnd(sizes[j]),ans=ranges[j][0]+c-1;
+    return {...base,at:'num',ask:'Melyik konzol inputra érkezik?',big:'SB'+(j+1)+' / '+c,num:ans,ph:'input szám',right:'Helyes: Input '+ans}}
+  const inp=start+rnd(total),j=ranges.findIndex(r=>inp>=r[0]&&inp<=r[1]),c=inp-ranges[j][0]+1;
+  return {...base,at:'boxnum',ask:'Melyik box, hányadik csatorna?',big:'Input '+inp,box:j,ch:c,nb:sizes.length,right:'Helyes: SB'+(j+1)+' / '+c};
+}
+
+/* ---------- TROUBLESHOOTING 2.0 ---------- */
+const RULES=[
+  'Először kérdezd meg: mi változott azóta, hogy még szólt?',
+  'Egy csatorna vagy több? Ha több, keresd a közös pontot.',
+  'Kezdd a lánc közepén: input meter vagy PFL. Ha ott van jel, a hiba utána van, ha nincs, előtte.',
+  'A gyors és gyakori dolgokat nézd meg elsőnek: mute, fader, 48V.',
+  'Egyszerre egy dolgot változtass, és ha nem az volt, állítsd vissza.',
+  'Mozgasd a hibát: ha a cserével vándorol, a cserélt elemben van.',
+  'Élesben előbb kerülőút, hogy szóljon, utána keresd a hibát.',
+  'Tesztelj ismert jó elemmel: tartalék kábel, tartalék DI.'];
+const SRC={dyn:'dinamikus mic',cond:'kondenzátor mic',adi:'aktív DI',wl:'vezeték nélküli kézi'};
+function srcType(nm){const s=nm.toLowerCase();
+  if(/vox|voc|ének|enek/.test(s))return Math.random()<.5?'wl':'dyn';
+  if(/\boh\b|hat|over|\bac\b|akusz|room|ride|ambient/.test(s))return 'cond';
+  if(/\bdi\b|key|synth|piano|\bpb\b|playback|track|zongora/.test(s))return 'adi';
+  return 'dyn';}
+const isAmpSrc=c=>c.t!=='wl'&&/gtr|git|guit|bass/i.test(c.name);
+const FAULTS={
+  inst:{sym:'n',lv:1,lab:'Forrás: a hangszeren lehalkítva',ok:c=>c.t==='adi'||isAmpSrc(c),key:'musician',reach:0,mv:'src',tip:'Mielőtt a pultot bontod, nézd meg a forrást: hangerő, pedál, bekapcsolt hangszer. Gyakoribb, mint gondolnád.'},
+  cable:{sym:'n',lv:1,lab:'Hibás kábel',ok:c=>c.t!=='wl',key:'swap',reach:0,mv:'src',tip:'Kábelgyanúnál ne mérj sokat: cseréld ismert jó kábelre. Tartalék kábel mindig legyen a színpad szélén.'},
+  phantom:{sym:'n',lv:1,lab:'Nincs fantomtáp (48V)',ok:c=>c.need48,key:'phantom',reach:0,mv:'desk',tip:'Kondenzátor mic vagy aktív DI néma? Első gondolat: a 48V. Nézd meg, be van-e kapcsolva azon a bemeneten.'},
+  rf:{sym:'n',lv:1,lab:'Adó kikapcsolva / lemerült',ok:c=>c.t==='wl',key:'rx',reach:0,mv:'src',tip:'Vezeték nélkülinél a vevő kijelzője mindent elárul: van-e RF, mennyi az elem, jön-e audio.'},
+  mute:{sym:'n',lv:1,lab:'Mute / fader / routing',ok:()=>true,key:'chan',reach:3,mv:'desk',tip:'Ha a csatorna meterén van jel, a hiba utána van: mute, fader, main hozzárendelés, DCA. Ezt 2 másodperc megnézni.'},
+  port:{sym:'n',lv:2,lab:'Rossz stagebox portba dugva',ok:()=>true,key:'port',reach:0,mv:'port',tip:'Ha a várt porton nincs jel, de egy szomszédoson van, rossz helyre dugták. Vesd össze a patch listával.'},
+  patch:{sym:'n',lv:2,lab:'Rossz input patch a pulton',ok:()=>true,key:'patch',reach:2,mv:'desk',tip:'Ha az inputon van jel, de a csatornán nincs, az input patch a gyanús. Nézd meg, melyik input jön erre a csatornára.'},
+  gain:{sym:'n',lv:2,lab:'PAD bent / gain minimumon',ok:()=>true,key:'chan',reach:3,mv:'desk',tip:'Halk, alig mozdul? PAD és gain. Scene váltásnál vagy split esetén más is átállíthatta.'},
+  scene:{sym:'n',lv:3,lab:'Scene recall állította át',ok:()=>true,key:'scene',reach:3,mv:'desk',tip:'Ha valami a scene váltás óta rossz, a scene-t gyanúsítsd: elmentett mute, átírt patch. A fontos csatornákat érdemes recall safe-re tenni.'},
+  ccable:{sym:'c',lv:3,lab:'Kontakthibás kábel / csatlakozó',ok:c=>c.t!=='wl',key:'swap',mv:'src',tip:'Mozgatásra erősödő recsegés: kontakthiba a kábelben vagy a csatlakozóban. Csere, és a rossz kábelt jelöld meg.'},
+  clip:{sym:'c',lv:3,lab:'Túlvezérelt gain (clip)',ok:()=>true,key:'input',mv:'desk',tip:'Torz, recsegő hang és piros input meter: túl nagy a gain. Vedd vissza, mielőtt mást keresel.'},
+  crf:{sym:'c',lv:3,lab:'RF zavar / gyenge elem',ok:c=>c.t==='wl',key:'rx',mv:'src',tip:'Szaggató vezeték nélküli: RF jel és elem. Cserélj elemet, nézd meg az antennákat, és hogy nincs-e frekvenciaütközés.'},
+  clock:{sym:'c',lv:3,lab:'Digitális clock / sync hiba',ok:()=>true,key:'input',mv:'none',tip:'Ha több csatornán is kattog, nem a csatornával van baj: digitális clock vagy sync. Nézd meg, ki a clock master.'},
+  ground:{sym:'h',lv:3,lab:'Földhurok (DI ground lift)',ok:c=>c.t==='adi',key:'lift',mv:'src',tip:'DI-n zúgás: első lépés a ground lift. Ha megszűnik, földhurok volt.'},
+  hum2:{sym:'h',lv:3,lab:'Sérült kábel árnyékolás',ok:c=>c.t!=='wl',key:'swap',mv:'src',tip:'Ha kábelcserével megszűnik a zúgás, sérült volt az árnyékolás. Az ilyen kábelt vedd ki a forgalomból.'},
+  amp:{sym:'h',lv:3,lab:'Hangszer / erősítő földelési hiba',ok:isAmpSrc,key:'musician',mv:'src',tip:'Gitár- vagy basszuserősítő zúg: nézd meg a zenész oldalát, a konnektort és a földelést. Ne a pultnál kezdd.'},
+  auxoff:{sym:'m',lv:2,lab:'Aux küldés lent / kikapcsolva',ok:()=>true,key:'aux',tip:'Ha a PA-ban szól, de a monitorban nem, a csatorna rendben van. A hiba az aux küldésben vagy a monitorúton van.'},
+  monbus:{sym:'m',lv:2,lab:'Monitor busz némítva / master lent',ok:()=>true,key:'bus',tip:'Ha egy monitorba semmi nem megy, nézd meg a busz masterét és mute-ját, mielőtt a csatornákat egyenként nézed.'},
+  monout:{sym:'m',lv:3,lab:'Monitor kimenet / erősítő / IEM adó',ok:()=>true,key:'monout',tip:'Ha a busz metere mozog, de a monitor néma, a kimenet után keresd: kimeneti patch, erősítő, hangfalkábel, IEM adó.'},
+  link:{sym:'x',lv:3,lab:'Hálózati / multi kapcsolat megszakadt',ok:()=>true,key:'net',tip:'Ha egy egész stagebox kiesik, nem csatornánként kell keresni. Nézd meg a box tápját és a hálózati vagy multi kapcsolatot.'},
+  sbpower:{sym:'x',lv:3,lab:'A stageboxnak nincs tápja',ok:()=>true,key:'sbstat',tip:'Stagebox kiesésnél első ránézés: ég-e a kijelzője, van-e tápja.'},
+  patchblk:{sym:'x',lv:3,lab:'Rossz blokk patchelve a pulton',ok:()=>true,key:'patch',tip:'Ha a box inputjain van jel, de a csatornákon nincs, egész blokk lehet rosszul patchelve, például scene vagy show fájl betöltése után.'}
+};
+const CHECKS=[
+  ['musician','Zenész / hangszer','nch'],
+  ['rx','Vezeték nélküli vevő','nc',c=>c.t==='wl'],
+  ['port','Stagebox port jelzés','nch'],
+  ['phantom','48V / PAD','nch'],
+  ['input','Pult input meter','nchx'],
+  ['pfl','PFL fejhallgatón','nchm'],
+  ['patch','Input patch képernyő','nx'],
+  ['chan','Csatorna: meter, mute, fader','nchx'],
+  ['scene','Scene / recall','nmx'],
+  ['swap','Kábelcsere','nch',c=>c.t!=='wl'],
+  ['move','Csere-teszt: másik port','nch'],
+  ['lift','DI ground lift','nch',c=>c.t==='adi'],
+  ['aux','Aux küldés a monitorba','m'],
+  ['bus','Monitor busz master / mute','m'],
+  ['monout','Monitor kimenet / erősítő / IEM','m'],
+  ['sbstat','Stagebox kijelző / táp','x'],
+  ['net','Hálózat / link státusz','x']];
+const checkLabel=id=>(CHECKS.find(c=>c[0]===id)||[id,id])[1];
+const OVR={
+  inst:{musician:()=>'A hangszeren le volt tekerve a hangerő. Feltekerve szól.'},
+  cable:{swap:()=>'Kábelcsere után szól.'},
+  phantom:{phantom:()=>'48V: KI ezen a bemeneten · PAD: KI'},
+  rf:{rx:()=>'Nincs RF jel. Az adó ki van kapcsolva vagy lemerült.',musician:()=>'Az adó kijelzője sötét.'},
+  mute:{chan:c=>c.muteTxt},
+  port:{port:c=>`${c.port}: nincs jel. A(z) ${c.wrongPort} porton viszont van, pedig annak üresnek kellene lennie.`},
+  patch:{patch:c=>`CH ${c.k} ← Input ${c.wrongInput}. Nem az Input ${c.input}!`},
+  gain:{chan:()=>'Csatorna meter: alig mozdul. Gain minimumon.',phantom:c=>`48V: ${c.need48?'BE':'KI'} · PAD: BE`,input:c=>`Input ${c.input}: nagyon gyenge jel.`},
+  scene:{scene:()=>'A koncert scene-ben ez a csatorna némítva volt elmentve.',chan:()=>'Csatorna meter: van jel. MUTE: BE.'},
+  ccable:{port:c=>`${c.port}: van jel, de időnként kiesik.`,swap:()=>'Kábelcsere után tiszta.',musician:()=>'Ha mozdul a kábel, erősebben recseg.'},
+  clip:{input:c=>`Input ${c.input}: piros, folyamatosan clippel.`,chan:()=>'Csatorna meter: a tetején. A gain jóval túl magasan.'},
+  crf:{rx:()=>'Az RF jel ugrál, elem 1/5.'},
+  clock:{input:()=>'A jel rendben, de más csatornákon is kattog.',chan:()=>'Több csatornán is kattogás, nem csak ezen.',pfl:()=>'PFL-en is kattog.'},
+  ground:{lift:()=>'Ground lift: KI. Átkapcsolva a zúgás megszűnik.'},
+  hum2:{swap:()=>'Kábelcsere után a zúgás megszűnik.'},
+  amp:{musician:()=>'Ha a zenész a húrokhoz ér, változik a zúgás. Másik konnektorból az erősítő csendes.'},
+  auxoff:{aux:c=>`${c.name} → ${c.mon}: a küldés −∞, teljesen lent.`},
+  monbus:{bus:c=>`${c.mon} busz: MUTE BE.`,monout:c=>`${c.mon} kimenet: a buszon nincs jel.`},
+  monout:{monout:c=>`A ${c.mon} busz metere mozog, de a ${c.montype} néma. Az erősítő, az adó vagy a kábel a gyanús.`},
+  link:{net:()=>'SB2 link: OFFLINE. A hálózati vagy multi kábel kicsúszott vagy sérült.'},
+  sbpower:{sbstat:()=>'Az SB2 kijelzője sötét, nincs tápja.',net:()=>'Az SB2 nem látszik a hálózaton.'},
+  patchblk:{input:()=>'Input 17–24: van jel.',patch:()=>'CH 17–24 ← Input 25–32. Rossz blokk van rápatchelve!'}
+};
+function obs(q,chk){
+  const c=q.ctx,F=FAULTS[q.fault],P=c.port,I='Input '+c.input,sym=q.sym;
+  const o=(OVR[q.fault]||{})[chk];if(o)return o(c);
+  if(sym==='m'){switch(chk){
+    case 'pfl':return 'PFL-en tisztán szól.';
+    case 'aux':return `${c.name} → ${c.mon}: küldés 0 dB körül, bekapcsolva.`;
+    case 'bus':return `${c.mon} busz: master 0 dB, mute KI, a meter mozog.`;
+    case 'monout':return `${c.mon} kimenet: patch rendben, a ${c.montype} más csatornával szól.`;
+    case 'scene':return 'Az utolsó recall óta nem változott semmi.';}}
+  if(sym==='x'){switch(chk){
+    case 'input':return 'Input 17–24: nincs jel.';
+    case 'patch':return 'CH 17–24 ← Input 17–24. Ez így stimmel.';
+    case 'chan':return 'Csatorna meterek: nincs jel. Mute KI.';
+    case 'sbstat':return 'Az SB2 kijelzője ég, van tápja.';
+    case 'net':return 'SB2 link: ONLINE, hiba nélkül.';
+    case 'scene':return 'Az utolsó recall óta nem változott semmi.';}}
+  const r=sym==='n'?F.reach:3;
+  switch(chk){
+    case 'musician':return c.t==='wl'?'Beleénekel, az adó kijelzője ég.':'Játszik, a hangszeren minden fel van tekerve.';
+    case 'rx':return 'RF jel stabil, elem 4/5, az audio LED villog.';
+    case 'port':return r>=1?`${P}: van jel.`:`${P}: nincs jel.`;
+    case 'phantom':return `48V: ${c.need48?'BE':'KI (nem kell neki)'} · PAD: KI`;
+    case 'input':return r>=2?`${I}: van jel, normál szint.`:`${I}: nincs jel.`;
+    case 'patch':return `CH ${c.k} ← ${I}. Ez így stimmel.`;
+    case 'chan':return r>=3?'Csatorna meter: van jel. Mute KI, fader 0 dB, main-re route-olva.':'Csatorna meter: nincs jel. Mute KI, fader 0 dB.';
+    case 'pfl':return sym==='n'?(r>=3?'PFL-en szól.':'PFL-en is néma.'):sym==='c'?'PFL-en is recseg.':'PFL-en is zúg.';
+    case 'scene':return 'Az utolsó recall óta nem változott semmi.';
+    case 'swap':return 'Kábelcsere után ugyanaz a helyzet.';
+    case 'move':return {src:'Másik portra és csatornára dugva is ugyanaz: a hiba vele vándorolt, tehát a forrásban vagy a kábelben van.',port:'Másik portba dugva szól: a port vagy a dugás volt a gond.',desk:'Másik portra dugva és ott patchelve rendben van: az eredeti csatorna beállításában van a hiba.',none:'Máshol is ugyanaz, és más csatornákon is: rendszerszintű hiba.'}[F.mv||'desk'];
+    case 'lift':return 'Ground lift: KI. Átkapcsolva nem változik semmi.';
+  }
+  return '';
+}
+function genFix(L){
+  const full=getList(),n=Math.min(24,full.length);
+  const syms=L===1?['n']:L===2?['n','n','n','m']:['n','n','n','n','c','c','h','m','m','x'];
+  for(let tries=0;tries<80;tries++){
+    const k=1+rnd(n),name=full[k-1],t=srcType(name);
+    const pl=x=>x<=16?'SB1/'+x:'SB2/'+(x-16);
+    const c={k,name,t,need48:t==='cond'||t==='adi',input:k,port:pl(k),mon:pick(['Mon 1','Mon 2','Mon 3','Mon 4','IEM 1','IEM 2'])};
+    c.montype=c.mon.startsWith('IEM')?'IEM bodypack':'wedge';
+    let w=k+R(1,3);if(w>n)w=k-R(1,3);if(w<1)w=k+1;c.wrongPort=pl(w);
+    do{c.wrongInput=1+rnd(32)}while(c.wrongInput===k);
+    c.muteTxt=pick(['Csatorna meter: van jel. MUTE: BE.','Csatorna meter: van jel. A fader teljesen lent (−∞).','Csatorna meter: van jel. Main/LR hozzárendelés: KI.']);
+    const sym=pick(syms);
+    const cand=Object.keys(FAULTS).filter(f=>FAULTS[f].sym===sym&&FAULTS[f].lv<=L&&FAULTS[f].ok(c));
+    if(!cand.length)continue;
+    const fault=wpick(cand,f=>1+2*(store.fixMiss[f]||0));
+    c.hist=fault==='scene'?'Soundcheckben szólt, a koncert scene betöltése óta nem.':pick(sym==='x'?['A műsor közben esett ki.','Az első dalnál vették észre.']:['Soundcheckben még szólt.','Új csatorna, még nem volt line check.','A szünet után vették észre.','Az első dalnál vették észre.']);
+    const opts=Object.keys(FAULTS).filter(f=>FAULTS[f].sym===sym&&FAULTS[f].lv<=L).map(f=>FAULTS[f].lab);
+    const symTxt={n:'nem szól a PA-ban',c:'recseg, szaggat',h:'zúg (50 Hz-es brumm)',m:`a PA-ban szól, a monitorban (${c.mon}) nem`,x:'az összes csatorna néma'}[sym];
+    return {kind:'fix',at:'opt',ctx:c,fault,sym,symTxt,
+      checks:CHECKS.filter(ch=>ch[2].includes(sym)&&(!ch[3]||ch[3](c))).map(ch=>ch[0]),log:[],max:L>=4?3:0,
+      options:shuffle(opts),correct:FAULTS[fault].lab,ask:'Mi a hiba?',right:'Helyes: '+FAULTS[fault].lab,phase:'q'};
+  }
+  return genFix(1);
+}
+const NODES=['Forrás','Kábel / port','Input','Csatorna','Kimenet'];
+function nodeStates(q){
+  const s=['u','u','u','u','u'],F=FAULTS[q.fault],r=F.reach,f=q.fault;
+  q.log.forEach(({id})=>{
+    if(id==='musician'||id==='rx')s[0]=(f==='inst'||f==='rf')?'bad':'ok';
+    if(id==='port')s[1]=r>=1?'ok':'bad';
+    if(id==='swap'&&f==='cable')s[1]='bad';
+    if(id==='phantom'&&f==='phantom')s[1]='bad';
+    if(id==='input')s[2]=f==='gain'?'warn':r>=2?'ok':'bad';
+    if(id==='chan'||id==='pfl'){s[3]=f==='gain'?'warn':r>=3?'ok':'bad';if(id==='chan'&&(f==='mute'||f==='scene'))s[4]='bad'}
+    if(id==='scene'&&f==='scene')s[4]='bad';
+  });
+  for(let i=4;i>=0;i--)if(s[i]==='ok')for(let j=0;j<i;j++)if(s[j]==='u')s[j]='ok';
+  for(let i=0;i<5;i++)if(s[i]==='bad')for(let j=i+1;j<5;j++)if(s[j]==='u')s[j]='bad';
+  return s;
+}
+function chainView(q){const s=nodeStates(q);return `<div class="chainv" aria-label="Jelút állapota">${NODES.map((nm,i)=>`<div class="nd ${s[i]}"><i></i><span>${nm}</span></div>`).join('<span class="ln"></span>')}</div>`}
+function orderNote(q){
+  const first=q.log[0]&&q.log[0].id;if(!first)return '';
+  if(q.sym==='n')return ['input','pfl','chan'].includes(first)?'Jó kezdés: a lánc közepén néztél először.':'Kezdhetted volna a lánc közepén (input meter vagy PFL): egy lépés, és megfeleződik a keresés.';
+  if(q.sym==='m')return ['aux','bus','monout'].includes(first)?'Jó: mivel a PA-ban szól, rögtön a monitorúton kerestél.':'Mivel a PA-ban szól, a csatorna rendben van: kezdd a monitorúton (aux, busz).';
+  if(q.sym==='x')return ['sbstat','net'].includes(first)?'Jó: egész box kiesésénél a közös pontot nézted először.':'Egész box kiesésénél a közös pontot nézd először: táp és link.';
+  return '';
+}
+
+/* ---------- REQUESTS (shift) ---------- */
+const WHO=['Mon 1','Mon 2','Mon 3','Mon 4','Mon 5','IEM 1','IEM 2','IEM 3'];
+const INST=['vokál','kick','snare','basszus','gitár','keys','click','hi-hat'];
+const rkey=r=>r.w+'|'+r.d+'|'+r.i;
+const rtext=r=>r.w+': '+(r.d?'több':'kevesebb')+' '+r.i;
+function genRequests(k){const reals=[],keys=new Set();
+  while(reals.length<k){const r={w:pick(WHO),d:Math.random()<.7,i:pick(INST)};if(!keys.has(rkey(r))){keys.add(rkey(r));reals.push(r)}}
+  return reals}
+function decoyFor(r,keys){for(let t=0;t<50;t++){const d={...r};const f=rnd(3);
+  if(f===0)d.w=pick(WHO.filter(x=>x!==r.w));else if(f===1)d.d=!r.d;else d.i=pick(INST.filter(x=>x!==r.i));
+  if(!keys.has(rkey(d))){keys.add(rkey(d));return d}}return null}
+let tq=[],tBusy=false,tTimer=null;
+const toastEl=document.getElementById('toast'),toastText=document.getElementById('toastText');
+function queueToast(r){tq.push(r);runToast()}
+function runToast(){if(tBusy||!tq.length)return;const r=tq.shift();tBusy=true;r.shown=true;
+  toastText.textContent=r.text||rtext(r).replace(': ',' kér: ');document.getElementById('toastT1').textContent=r.type==='prob'?'Bejelentés':'Kérés érkezett';toastEl.classList.add('show');
+  tTimer=setTimeout(()=>{toastEl.classList.remove('show');setTimeout(()=>{tBusy=false;runToast()},400)},(S&&S.toastMs)||3600)}
+function clearToasts(){tq=[];clearTimeout(tTimer);toastEl.classList.remove('show');tBusy=false}
+
+/* ---------- SHIFT 2: incidents ---------- */
+const SH2=[null,{r:2,p:1,q:6,ms:4000},{r:2,p:2,q:7,ms:3600},{r:2,p:3,q:8,ms:3000}];
+const RQ_INST=['vokál','kick','gitár','click'],RQ_CH={'vokál':'Vox Lead','kick':'Kick In','gitár':'Gtr 1','click':'Click'};
+const MIXES=['Mon 1','Mon 2','Mon 3','Mon 4','IEM 1','IEM 2'];
+const NOSIG='A láda táp LED-je ég, de a jel LED nem villog.';
+const PROBS={
+  wedge:{target:()=>pick(['Mon 1','Mon 2','Mon 3','Mon 4']),issue:'láda nem szól',toast:t=>`A ${t} ládája nem szól`,prio:3,
+    checks:[['bus','Busz meter és mute'],['out','Kimeneti patch'],['amp','Láda / erősítő LED-ek']],
+    def:{bus:t=>`${t} busz: a meter mozog, mute KI.`,out:t=>`${t} busz a láda kimenetére patchelve. Stimmel.`,amp:()=>'A láda táp LED-je ég, a jel LED villog.'},
+    causes:[{fix:'unmute',obs:{bus:t=>`${t} busz: MUTE BE.`,amp:()=>NOSIG}},
+      {fix:'patch',obs:{out:t=>`${t} busz egy másik kimenetre van patchelve, nem a láda kimenetére!`,amp:()=>NOSIG}},
+      {fix:'power',obs:{amp:()=>'A láda LED-jei nem égnek: kicsúszott a tápkábel.'}},
+      {fix:'cable',obs:{amp:()=>NOSIG}}],
+    actions:[['unmute','Busz unmute'],['patch','Kimeneti patch javítása'],['power','Tápkábel visszadugása'],['cable','XLR kábel cseréje a ládához']],
+    tip:'Ha a láda nem szól, menj végig a monitorúton: busz, kimeneti patch, a láda táp és jel LED-je. Ha a busz és a patch jó, de a jel LED nem villog, a kábel a gyanús.'},
+  iem:{target:()=>pick(['IEM 1','IEM 2']),issue:'csak bal oldalon',toast:t=>`${t}: csak a bal fülemben szól`,prio:2,
+    checks:[['bp','Bodypack kijelző / balansz'],['jack','Fülhallgató csatlakozó'],['tx','Adó bemenetei és meterei'],['patch','Kimeneti patch L/R']],
+    def:{bp:()=>'Balansz középen, stereo módban.',jack:()=>'Rendesen be van dugva.',tx:()=>'Az adón az L és az R meter is mozog.',patch:t=>`${t} L és R a két adóbemenetre patchelve. Stimmel.`},
+    causes:[{fix:'bpbal',obs:{bp:()=>'A bodypack balansza teljesen balra van tekerve.'}},
+      {fix:'jack',obs:{jack:()=>'A fülhallgató jackje csak félig van bedugva.'}},
+      {fix:'txcable',obs:{tx:()=>'Az adón csak az L meter mozog: az R bemenetbe nincs kábel dugva.'}},
+      {fix:'patchR',obs:{tx:()=>'Az adón csak az L meter mozog.',patch:t=>`${t} R oldala nincs kimenetre patchelve!`}}],
+    actions:[['bpbal','Bodypack balansz középre'],['jack','Jack rendes bedugása'],['txcable','R kábel bedugása az adóba'],['patchR','R kimenet patchelése']],
+    tip:'Egyoldalas in-earnél a legegyszerűbbel kezdd: jack és bodypack balansz. Ha az adón csak az L meter mozog, a hiba előtte van: kábel vagy kimeneti patch.'},
+  click:{target:()=>'Dobos HD',issue:'click csak bal oldalon',toast:()=>'Dobos: a click csak bal oldalon szól a fejesben',prio:2,
+    checks:[['other','Kérdezd: más is csak bal oldalon?'],['pan','Click pan a dobos mixben'],['hp','Fejhallgató-erősítő és jack']],
+    def:{other:()=>'Nem, minden más rendesen szól mindkét oldalon.',pan:()=>'A Click pan középen.',hp:()=>'Balansz középen, a jack rendesen be van dugva.'},
+    causes:[{fix:'pan',obs:{pan:()=>'A Click a dobos mixben teljesen balra van pannolva.'}},
+      {fix:'hpbal',obs:{other:()=>'Igen, minden csak a bal oldalon szól.',hp:()=>'A fejhallgató-erősítő balansza balra van tekerve.'}},
+      {fix:'jack',obs:{other:()=>'Igen, minden csak a bal oldalon szól.',hp:()=>'A jack csak félig van bedugva az erősítőbe.'}}],
+    actions:[['pan','Click pan középre'],['hpbal','Fejhallgató-erősítő balansz középre'],['jack','Jack rendes bedugása']],
+    tip:'Kérdezd meg, csak a click egyoldalas-e. Ha csak az, a mixben a hiba (pan). Ha minden, akkor a fejhallgató-erősítőnél vagy a jacknél keresd.'},
+  pa:{target:()=>'PA',issue:'zúg / zajos',toast:()=>'FOH: a PA zúg a számok között',prio:3,
+    checks:[['muteall','Összes input mute teszt'],['meters','Csatorna meterek csendben'],['pb','Playback laptop'],['amps','Main kimenet és erősítő gain']],
+    def:{muteall:()=>'Minden input némítva: a zaj eltűnik.',meters:()=>'Csendben minden meter nyugton van.',pb:()=>'A laptop töltőjét kihúzva nincs változás.',amps:()=>'Main kimenet 0 dB körül, az erősítők gainje normál.'},
+    causes:[{fix:'mutech',obs:{meters:()=>'A CH 23 nincs használva, de nyitva van, magas gainnel: ez hozza a zajt.'}},
+      {fix:'lift',obs:{meters:()=>'A PB L/R meter csendben is mozog.',pb:()=>'Ha kihúzod a laptop töltőjét, a zúgás megszűnik.'}},
+      {fix:'gainst',obs:{muteall:()=>'Minden input némítva: a zaj megmarad.',amps:()=>'A main kimenet −20 dB-en, az erősítők gainje maximumon.'}}],
+    actions:[['mutech','Nem használt csatorna némítása'],['lift','Laptop töltő ki / DI ground lift'],['gainst','Gain struktúra: pult fel, erősítő le']],
+    tip:'Zajnál az első teszt: némíts minden inputot. Ha eltűnik, egy bemenet hozza (nyitott csatorna, földhurok). Ha marad, a kimeneti oldalon van (gain struktúra, erősítők).'},
+  gtr:{target:()=>'Gitár',issue:'recseg',toast:()=>'Gitáros: recseg a gitárom',prio:2,
+    checks:[['move','Kábel megmozgatása'],['pedal','Pedálsor / patch kábelek'],['input','Input meter']],
+    def:{move:()=>'Mozgatásra nem változik.',pedal:()=>'A pedálsor rendben, a kábelek feszesek.',input:()=>'Normál szint, nem clippel.'},
+    causes:[{fix:'cable',obs:{move:()=>'Ha mozgatod a gitárkábelt, erősödik a recsegés.'}},
+      {fix:'pedal',obs:{pedal:()=>'Az egyik pedál patch kábele kontakthibás, megmozdítva recseg.'}},
+      {fix:'gain',obs:{input:()=>'A gitár input piros, folyamatosan clippel.'}}],
+    actions:[['cable','Gitárkábel csere'],['pedal','Pedál patch kábel csere'],['gain','Gain vissza']],
+    tip:'Recsegő gitárnál mozgasd meg a kábelt, nézd meg a pedálsort és az input metert. A hiba sokszor a zenész oldalán van, nem a pultnál.'}
+};
+const TARGETS=['Mon 1','Mon 2','Mon 3','Mon 4','IEM 1','IEM 2','Dobos HD','PA','Gitár'];
+const ISSUES=['több vokál','kevesebb vokál','több kick','kevesebb kick','több gitár','kevesebb gitár','több click','kevesebb click','láda nem szól','csak bal oldalon','click csak bal oldalon','zúg / zajos','recseg'];
+const REQ_TIP='Kérésnél három részlet számít: kinek (melyik mix), mit (melyik csatorna), merre (fel vagy le).';
+function genIncidents(L){
+  const cfg=SH2[L],out=[],used=new Set();
+  shuffle(Object.keys(PROBS)).slice(0,cfg.p).forEach(id=>{
+    const P=PROBS[id];let t,k=0;do{t=P.target()}while(used.has(t)&&k++<20);used.add(t);
+    out.push({type:'prob',id,target:t,issue:P.issue,text:P.toast(t),cause:pick(P.causes),prio:P.prio,log:[],solved:false});
+  });
+  while(out.filter(x=>x.type==='req').length<cfg.r){
+    const t=pick(MIXES.filter(m=>!used.has(m)));used.add(t);
+    const d=Math.random()<.7,inst=pick(RQ_INST),issue=(d?'több ':'kevesebb ')+inst;
+    const ch=RQ_CH[inst],dir=d?'fel':'le',other=pick(MIXES.filter(m=>m!==t));
+    const acts=shuffle([['ok',`${ch} → ${t}: ${dir}`],['x1',`${ch} → ${other}: ${dir}`],['x2',`${ch} → ${t}: ${d?'le':'fel'}`],['x3',`${ch} fader ${dir} (PA)`]]);
+    out.push({type:'req',target:t,issue,text:`${t} kér: ${issue}`,prio:1,acts,log:[],solved:false});
+  }
+  return shuffle(out);
+}
+const incKey=x=>x.target+'|'+x.issue;
+function obs2(inc,chk){const P=PROBS[inc.id];const o=inc.cause.obs[chk];return (o||P.def[chk])(inc.target)}
+
+/* ---------- SHIFT: lamp ---------- */
+const SHL=[null,{k:[0,1,1,2],on:260,two:false},{k:[0,1,2,2,3],on:130,two:false},{k:[1,2,2,3],on:150,two:true}];
+const lampBox=document.getElementById('lampbox');
+function lampShow(on,two){lampBox.classList.toggle('show',on);lampBox.classList.toggle('two',!!two)}
+function scheduleLamps(){
+  const c=SHL[S.level],k=pick(c.k);
+  for(let j=0;j<k;j++){
+    const d=R(700,7000),red=!c.two||Math.random()<.6;
+    pendingReq.push(setTimeout(()=>{
+      const el=document.getElementById(red?'lbR':'lbG');if(!el||!S||S.mode!=='shiftL')return;
+      if(red)S.flR++;else S.flG++;
+      el.classList.add('on');setTimeout(()=>el.classList.remove('on'),c.on);
+    },d));
+  }
+}
+function lampRecall(){
+  stopTimers();lampShow(false);
+  S.lampPhase=true;S.q={kind:'lampq',at:'num',phase:'q',ask:SHL[S.level].two?'Hányszor villant a PIROS lámpa?':'Hányszor villant a lámpa?',ph:'villanás'};
+  S.entry='';S.answered=false;S.t0=performance.now();renderLampQ();
+}
+function renderLampQ(){
+  const two=SHL[S.level].two;let res='';
+  if(S.answered){const d=Math.abs(S.lampAns-S.flR);
+    res=`<div class="fb ${d===0?'good':'bad'}"><div class="h">${d===0?'Pontos!':d===1?'Majdnem':'Nem ez'}</div>
+      <div>${S.flR} ${two?'piros ':''}villanás volt${two?`, mellette ${S.flG} zöld`:''}. Te ${S.lampAns}-t mondtál.</div>
+      <div class="lesson"><b>Tanulság</b>Számolás közben ne a számot ismételgesd, hanem kösd valamihez: ujjal számolj, vagy minden villanásnál nyomj meg egy gombot a pulton a fejedben.</div>
+      <button class="btn" data-act="sum">Összegzés</button></div>`}
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Műszak vége</span><span></span></div>
+    <div class="ask"><span class="big" style="font-size:30px">${S.q.ask}</span><span class="muted small">A munka közben a sarokban villogott.</span></div>
+    ${S.answered?res:answerUI(S.q)}`;
+}
+
+/* ---------- SESSION ---------- */
+let S=null,screen='home',pendingReq=[],seqT=[],confirmReset=false,editErr='';
+function stopTimers(){if(S)clearTimeout(S.autoNext);pendingReq.forEach(clearTimeout);pendingReq=[];seqT.forEach(clearTimeout);seqT=[];clearToasts()}
+function start(mode){
+  stopTimers();confirmReset=false;
+  const L=info(mode).level;
+  S={mode,i:0,total:MODES[mode].n,correct:0,wrong:0,times:[],up:0,down:0,level:L,startLevel:L,ruleOff:rnd(RULES.length)};
+  screen='game';
+  if(mode==='shift'){
+    const k=L<3?3:4;S.reqs=genRequests(k);
+    const slots=shuffle(range(0,S.total-2)).slice(0,k).sort((a,b)=>a-b);
+    S.reqAt={};slots.forEach((q,ix)=>S.reqAt[q]=S.reqs[ix]);
+  }
+  if(mode==='shiftL'){S.flR=0;S.flG=0;lampShow(true,SHL[L].two)}
+  if(mode==='shift2'){
+    const cfg=SH2[L];S.total=cfg.q;S.toastMs=cfg.ms;S.incs=genIncidents(L);
+    const slots=shuffle(range(0,S.total-2)).slice(0,S.incs.length).sort((a,b)=>a-b);
+    S.reqAt={};slots.forEach((q,ix)=>S.reqAt[q]=S.incs[ix]);
+  }
+  if(mode==='mem'){S.memList=memListFor(L);S.study=true;return renderStudy()}
+  if(mode==='sprint'){S.endAt=performance.now()+120000}
+  if(mode==='span'){S.len=4;S.fails=0;S.best=0;return spanRound()}
+  next();
+}
+function gen(){
+  switch(S.mode){
+    case 'calc10':case 'sprint':return genCalc(S.level);
+    case 'tt10':case 'ttx':return genTT(S.mode);
+    case 'shift2':return genBox(Math.min(S.level+1,5));
+    case 'shiftL':return genBox(Math.min(S.level+1,5));
+    case 'blink':return genBlink(S.level);
+    case 'trans':return genTrans(S.level);case 'intv':return genIntv(S.level);
+    case 'mem':return genMem();case 'patch':return genPatch(S.level);case 'chain':return genChain(S.level);case 'fix':return genFix(S.level);
+    default:return genBox(S.level)}
+}
+function next(){
+  if(S.mode==='sprint'){if(performance.now()>=S.endAt)return summary()}
+  else if(S.i>=S.total)return S.mode==='shift'?recall():S.mode==='shift2'?recall2():S.mode==='shiftL'?lampRecall():summary();
+  S.q=gen();S.entry='';S.boxSel=null;S.answered=false;S.picked=null;S.lvMsg='';
+  if(S.q.phase==='q')S.t0=performance.now();
+  if((S.mode==='shift'||S.mode==='shift2')&&S.reqAt[S.i]){const r=S.reqAt[S.i];pendingReq.push(setTimeout(()=>queueToast(r),1300))}
+  render();
+  if(S.mode==='shiftL'){pendingReq.forEach(clearTimeout);pendingReq=[];scheduleLamps()}
+  if(S.q.kind==='blink')runBlink();
+}
+function adapt(ok){
+  const max=MODES[S.mode].max;if(max<=1||S.mode==='shift2'||S.mode==='shiftL'){S.lvMsg='';return}
+  if(ok){S.up++;S.down=0}else{S.down++;S.up=0}
+  if(S.up>=3&&S.level<max){S.level++;S.up=0;S.lvMsg='Szintlépés: '+S.level}
+  else if(S.down>=2&&S.level>1){S.level--;S.down=0;S.lvMsg='Visszalépés: '+S.level+'. szint'}
+  else S.lvMsg='';
+  if(S.mode==='mem'&&S.lvMsg)S.lvMsg+=' (a lista hossza a következő körtől)';
+}
+function finishAnswer(ok){
+  const q=S.q,tm=(performance.now()-S.t0)/1000;
+  S.answered=true;S.ok=ok;S.times.push(tm);
+  if(ok)S.correct++;else S.wrong++;
+  if(q.kind==='tt'){const s=store.facts[q.fact]||{n:0,ok:0,t:0};s.n++;if(ok)s.ok++;s.t=s.n===1?tm:Math.round((s.t*.6+tm*.4)*10)/10;store.facts[q.fact]=s}
+  if(q.kind==='fix'){const m=store.fixMiss;if(!ok)m[q.fault]=Math.min(5,(m[q.fault]||0)+1);else if(q.log.length<=3)m[q.fault]=Math.max(0,(m[q.fault]||0)-1)}
+  adapt(ok);render();
+  const go=d=>{S.autoNext=setTimeout(()=>{S.i++;next()},d)};
+  if(S.mode==='sprint')return go(ok?250:1300);
+  if(q.kind==='fix')return;
+  if(ok)go(q.kind==='calc'||q.kind==='tt'?350:q.kind==='blink'?900:1100);
+}
+
+/* ---------- blink runner ---------- */
+function runBlink(){
+  const q=S.q;
+  seqT.push(setTimeout(()=>{
+    q.phase='show';render();
+    q.ev.forEach(e=>{
+      seqT.push(setTimeout(()=>{const el=document.getElementById(e.l==='r'?'lampR':'lampG');if(el)el.classList.add('on')},e.t));
+      seqT.push(setTimeout(()=>{const el=document.getElementById(e.l==='r'?'lampR':'lampG');if(el)el.classList.remove('on')},e.t+160));
+    });
+    const end=q.ev[q.ev.length-1].t+700;
+    seqT.push(setTimeout(()=>{q.phase='q';S.t0=performance.now();render()},end));
+  },1100));
+}
+
+/* ---------- span (digit memory) ---------- */
+function spanRound(){
+  const d=[];while(d.length<S.len){const x=rnd(10);if(x!==d[d.length-1])d.push(x)}
+  S.q={kind:'span',at:'num',digits:d,str:d.join(''),phase:'show',ask:'Írd be a sorrendet',ph:S.len+' számjegy'};
+  S.entry='';S.answered=false;S.lvMsg='';
+  render();
+  const el=()=>document.getElementById('flash');
+  let t=900;
+  d.forEach(x=>{
+    seqT.push(setTimeout(()=>{const e=el();if(e){e.className='flash';e.textContent=x}},t));
+    seqT.push(setTimeout(()=>{const e=el();if(e)e.textContent=''},t+800));
+    t+=1050;
+  });
+  seqT.push(setTimeout(()=>{S.q.phase='q';S.t0=performance.now();render()},t));
+}
+function spanAnswer(){
+  const q=S.q,tm=(performance.now()-S.t0)/1000,ok=S.entry===q.str;
+  S.answered=true;S.ok=ok;S.times.push(tm);
+  if(ok){S.correct++;S.best=Math.max(S.best,S.len);render();S.autoNext=setTimeout(()=>{S.len++;S.i++;spanRound()},1000)}
+  else{S.wrong++;S.fails++;render();S.len=4}
+}
+
+/* ---------- RENDER ---------- */
+function modeCard(m){const f=info(m),M=MODES[m];
+  return `<button class="mode" style="--c:var(${M.c})" data-act="mode" data-v="${m}"><span class="name">${M.name}</span><span class="small muted">${M.desc}</span><span class="meta">Szint ${f.level}/${M.max}${f.last?' · utolsó kör: '+esc(f.last):''}</span></button>`}
+function duoCard(title,desc,c,items){
+  return `<div class="mode" style="--c:var(${c})"><span class="name">${title}</span><span class="small muted">${desc}</span>
+  <div class="duo">${items.map(([m,lab])=>{const f=info(m);const meta=f.best!=null?('rekord: '+f.bestTxt):f.last?('utolsó: '+f.last):(MODES[m].max>1?'szint '+f.level:'még nem játszottad');return `<button data-act="mode" data-v="${m}"><b>${lab}</b><span>${esc(meta)}</span></button>`}).join('')}</div></div>`;
+}
+function home(){
+  stopTimers();lampShow(false);S=null;screen='home';
+  const rndMode=store.listMode==='random';
+  const list=rndMode?null:getList(),own=Array.isArray(store.list)&&store.list.length>=6;
+  const sp=info('span');
+  app.innerHTML=`<div class="hero"><span class="tape">Live sound tréning</span><h1>Patch<span class="c">Catch</span></h1>
+    <p class="muted">Rövid körök fejszámolásra, memóriára és hibakeresésre. A szint magától igazodik: 3 jó egymás után feljebb visz, 2 hiba lejjebb.</p></div>
+    <span class="sect">Fejszámolás</span>
+    ${duoCard('Fejszámolás','Vegyes feladatok: műveletek, hiányzó szám, láncolt számolás, élő hangos példák (inputok, BPM, dB).','--accent',[['calc10','10 feladat időre'],['sprint','120 mp sprint']])}
+    ${duoCard('Szorzótábla','Fejből kell tudni. Amit rontasz vagy lassan mondasz, gyakrabban visszajön, amíg rögzül.','--cy',[['tt10','10×10-ig'],['ttx','Tovább (11–20)']])}
+    <span class="sect">Zeneelmélet</span>
+    <div class="seg" role="group" aria-label="Hangnevek"><button class="${store.noteNames==='hu'?'':'on'}" data-act="nnames" data-v="intl">C D E F G A B♭ B</button><button class="${store.noteNames==='hu'?'on':''}" data-act="nnames" data-v="hu">C D E F G A B H</button></div>
+    ${modeCard('trans')}${modeCard('intv')}
+    <span class="sect">Memória és figyelem</span>
+    <button class="mode" style="--c:var(--vx)" data-act="mode" data-v="span"><span class="name">Számmemória</span><span class="small muted">Számjegyek villannak fel egyenként, utána beírod őket. 4-ről indul, minden jó után eggyel hosszabb. Hibánál vissza 4-re, 3 hibáig megy.</span><span class="meta">${sp.best?'Rekord: '+sp.best+' számjegy':'Még nem játszottad'}</span></button>
+    ${modeCard('blink')}${modeCard('mem')}
+    <span class="sect">Patch</span>
+    <div class="seg" role="group" aria-label="Csatornalista"><button class="${rndMode?'':'on'}" data-act="listmode" data-v="fixed" aria-pressed="${!rndMode}">Fix lista</button><button class="${rndMode?'on':''}" data-act="listmode" data-v="random" aria-pressed="${rndMode}">Véletlen lista</button></div>
+    ${rndMode
+      ?`<div class="listcard"><div style="min-width:0"><div><b>Véletlen csatornalista</b></div><div class="prev">Minden kérdés új listát kap (a Lista memóriában körönként egyet).</div></div></div>`
+      :`<div class="listcard"><div style="min-width:0"><div><b>${own?'Saját csatornalista':'Alap csatornalista'}</b> <span class="muted small">· ${list.length} csatorna</span></div><div class="prev">${esc(list.slice(0,6).join(', '))}…</div></div><button data-act="edit">Szerkesztés</button></div>`}
+    ${modeCard('patch')}${modeCard('chain')}${modeCard('box')}
+    <span class="sect">Élesben</span>${modeCard('fix')}${modeCard('shiftL')}${modeCard('shift')}${modeCard('shift2')}
+    <div class="foot"><span id="sync"></span><button class="link ${confirmReset?'warn':''}" data-act="reset">${confirmReset?'Biztos? Koppints újra a nullázáshoz':'Szintek és rekordok nullázása'}</button></div>`;
+  syncStatus();
+}
+function renderEdit(){
+  screen='edit';const list=getList();
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Mégse</button><span>Csatornalista</span><span></span></div>
+    <h2>Csatornalista</h2>
+    <p class="muted small">Soronként egy csatorna, a CH 1-gyel kezdve, abban a sorrendben, ahogy élesben használod. Minden patch mód ebből dolgozik. Legalább 6 sor kell.</p>
+    <label class="sect" for="listEdit">Csatornák</label>
+    <textarea id="listEdit" spellcheck="false">${esc(list.join('\n'))}</textarea>
+    <div class="err" id="err">${esc(editErr)}</div>
+    <button class="btn" data-act="listsave">Mentés</button>
+    <button class="btn ghost" data-act="listdefault">Alap lista visszaállítása</button>`;
+}
+function header(){
+  const M=MODES[S.mode];
+  if(S.mode==='sprint'){const left=Math.max(0,(S.endAt-performance.now())/1000);
+    return `<div class="top"><button class="x" data-act="home">Kilépés</button><span class="tt">${M.name}</span><span class="pill lv">Sz. ${S.level}</span><span class="pill ${left<15?'hot':''}" id="cd">${Math.ceil(left)} s</span></div>
+    <div class="progress"><i id="cdbar" style="width:${(1-left/120)*100}%"></i></div>`}
+  if(S.mode==='span')return `<div class="top"><button class="x" data-act="home">Kilépés</button><span class="tt">${M.name}</span><span class="pill lv">${S.len} számjegy</span><span class="pill">hiba: ${S.fails}/3</span></div>`;
+  const pct=Math.round(S.i/S.total*100);
+  return `<div class="top"><button class="x" data-act="home">Kilépés</button><span class="tt">${M.name}</span>${M.max>1?`<span class="pill lv">Sz. ${S.level}</span>`:''}<span class="pill">${Math.min(S.i+1,S.total)}/${S.total}</span></div>
+  <div class="progress"><i style="width:${pct}%"></i></div>`;
+}
+function chList(list,big){
+  return `<div class="chlist ${big?'big':''}" style="grid-template-rows:repeat(${Math.ceil(list.length/2)},auto)">${list.map((nm,i)=>`<div class="ch"><span class="n">${i+1}</span><span class="s" style="background:var(--${grpOf(nm)})"></span><span class="nm">${esc(nm)}</span></div>`).join('')}</div>`;
+}
+function opsHtml(ops){return `<div class="ops">${ops.map((o,k)=>`<div class="op"><span class="k">${k+1}.</span><span>${o.txt}</span>${o.hint?`<span class="hint">${esc(o.hint)}</span>`:''}</div>`).join('')}</div>`}
+function feedback(){
+  if(!S.answered)return '';
+  const q=S.q;
+  if(S.mode==='sprint')return `<div class="fb ${S.ok?'good':'bad'}"><div class="h">${S.ok?'Pontos':esc(q.right)}${S.lvMsg?' · '+esc(S.lvMsg):''}</div></div>`;
+  if(q.kind==='fix'){
+    const F=FAULTS[q.fault],on=orderNote(q);
+    return `<div class="fb ${S.ok?'good':'bad'}"><div class="h">${S.ok?'Megvan':'Nem ez'}${S.lvMsg?' · '+esc(S.lvMsg):''}</div>
+      ${S.ok?'':`<div>${esc(q.right)}</div>`}
+      <div class="lesson"><b>Tanulság</b>${esc(F.tip)}</div>
+      <div class="small muted">A leggyorsabb ellenőrzés: ${esc(checkLabel(F.key))}. Te ${q.log.length} ellenőrzést használtál.${on?' '+esc(on):''}</div>
+      <button class="btn" data-act="next">Tovább</button></div>`;
+  }
+  return `<div class="fb ${S.ok?'good':'bad'}"><div class="h">${S.ok?'Pontos':'Nem ez'}${S.lvMsg?' · '+esc(S.lvMsg):''}</div>
+    ${S.ok?'':`<div>${esc(q.right)}</div>`}${q.expl&&(!S.ok||!['calc','tt'].includes(q.kind))?`<div class="${q.kind==='calc'||q.kind==='tt'?'':'small muted'}">${esc(q.expl)}</div>`:''}
+    ${S.ok?'':'<button class="btn" data-act="next">Tovább</button>'}</div>`;
+}
+function answerUI(q){
+  if(q.at==='note'){
+    return `<div class="notes">${range(0,11).map(i=>{let cls='';if(S.answered){if(i===q.note)cls='ok';else if(i===S.picked)cls='no'}
+      return `<button class="opt ${cls}" data-act="note" data-v="${i}" ${S.answered?'disabled':''}>${btnName(i)}</button>`}).join('')}</div>`+feedback();
+  }
+  if(q.at==='opt'){
+    return `<div class="opts ${q.kind==='fix'?'one':''}">${q.options.map((o,k)=>{
+      let cls='';if(S.answered){if(o===q.correct)cls='ok';else if(k===S.picked)cls='no'}
+      return `<button class="opt ${cls}" data-act="opt" data-v="${k}" ${S.answered?'disabled':''}>${esc(o)}</button>`}).join('')}</div>`+feedback();
+  }
+  if(S.answered)return feedback();
+  let h='';
+  if(q.at==='boxnum')h+=`<div class="boxsel">${range(0,q.nb-1).map(j=>`<button class="${S.boxSel===j?'on':''}" data-act="boxsel" data-v="${j}">SB${j+1}</button>`).join('')}</div>`;
+  const disp=q.at==='boxnum'
+    ?`${S.boxSel!=null?'SB'+(S.boxSel+1)+' /':'<span class="ph">box /</span>'} ${S.entry||'<span class="ph">csatorna</span>'}`
+    :(S.entry||`<span class="ph">${q.ph||'szám'}</span>`);
+  return h+`<div class="entry"><div class="disp">${disp}</div></div>
+    <div class="keys">${range(1,9).map(d=>`<button data-act="key" data-v="${d}">${d}</button>`).join('')}
+    <button data-act="key" data-v="del" aria-label="Törlés">⌫</button><button data-act="key" data-v="0">0</button><button class="okk" data-act="key" data-v="ok">OK</button></div>`;
+}
+const askHtml=q=>`<div class="ask"><span class="muted">${q.ask}</span><span class="big ${q.word?'word':q.mono?'mono':''}">${esc(q.big)}</span><span class="timer" id="timer">0.0 s</span></div>`;
+function renderStudy(){
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Lista memória</span><span class="pill lv">Sz. ${S.level}</span></div>
+    <div class="seg" style="grid-template-columns:1fr 1fr 1fr" role="group" aria-label="Lista forrása">${[['own','Saját'],['rand','Véletlen'],['mess','Kevert']].map(([v,l])=>`<button class="${(store.memSrc||'own')===v?'on':''}" data-act="memsrc" data-v="${v}">${l}</button>`).join('')}</div>
+    <div class="card"><span class="label">Tanuld meg · ${S.memList.length} csatorna</span>${chList(S.memList,true)}
+    ${(store.memSrc||'own')!=='own'?'<button class="btn ghost" data-act="memnew">Új véletlen lista</button>':''}</div>
+    <p class="small muted">${store.memSrc==='mess'?'Ez most összevissza van bedugva, mint egy kapkodós átállásnál. Keress benne kapaszkodót: hol vannak a dobok, hol az ének.':'Annyi ideig nézd, amennyi kell. Utána a lista eltűnik, és fejből kérdezlek. Segít, ha csoportokban jegyzed meg: dobok, basszus, gitárok, billentyű, ének.'}</p>
+    <button class="btn" data-act="study">Megtanultam, jöhet</button>`;
+}
+function render(){
+  if(!S)return home();
+  if(S.study)return renderStudy();
+  const q=S.q;let body='';
+  if(q.kind==='calc'||q.kind==='tt'||q.kind==='mem'||q.kind==='music'){
+    body+=askHtml(q)+answerUI(q);
+  }else if(q.kind==='span'){
+    if(q.phase==='show')body+=`<div class="flash dim" id="flash">Figyelj…</div><p class="small muted">Tipp: csoportosíts, mint egy telefonszámnál: 3-as vagy 4-es csomagokban.</p>`;
+    else{
+      body+=`<div class="ask"><span class="muted">${q.ask}</span><span class="timer" id="timer">0.0 s</span></div>`;
+      if(!S.answered)body+=answerUI(q);
+      else body+=`<div class="fb ${S.ok?'good':'bad'}"><div class="h">${S.ok?'Megvan! Jöhet a '+(S.len+1)+' számjegy':'Nem ez'}</div>
+        ${S.ok?'':`<div>A sor ez volt: <b class="mono">${q.str}</b>, te ezt írtad: <span class="mono">${esc(S.entry)||'semmi'}</span></div>
+        ${S.fails>=3?'<button class="btn" data-act="spanend">Összegzés</button>':`<p class="small muted">Vissza 4 számjegyre. Még ${3-S.fails} hibád lehet.</p><button class="btn" data-act="spanretry">Újra 4-ről</button>`}`}</div>`;
+    }
+  }else if(q.kind==='blink'){
+    body+=`<div class="lamps"><div class="lamp" id="lampR" aria-hidden="true"></div>${q.two?'<div class="lamp g" id="lampG" aria-hidden="true"></div>':''}</div>`;
+    if(q.phase==='ready')body+=`<p class="muted">Figyelj… ${q.two?'Csak a <b style="color:#ff6b6b">piros</b> villanásokat számold, a zöldet ne.':'Számold a villanásokat.'}</p>`;
+    else if(q.phase==='show')body+=`<p class="muted">${q.two?'Csak a pirosat számold.':'Számolj…'}</p>`;
+    else body+=askHtml({...q,big:q.two?'Piros villanások':'Villanások'})+answerUI(q);
+  }else if(q.kind==='patch'||q.kind==='chain'){
+    body+=`<div class="card"><span class="label">${q.kind==='chain'?'Csatornalista (alapállapot)':'Eredeti csatornalista'}</span>${chList(q.list)}${q.setup||''}</div>`;
+    if(q.phase==='memo')body+=`<div class="card"><span class="label">Változások, sorrendben</span>${opsHtml(q.ops)}<p class="small muted">Jegyezd meg őket. A kérdésnél már nem látod.</p></div><button class="btn" data-act="memo">Megjegyeztem</button>`;
+    else body+=`<div class="card"><span class="label">Változások, sorrendben</span>${q.hide?'<div class="hidden-ops">Fejből kell tudnod</div>':opsHtml(q.ops)}</div>`+askHtml(q)+answerUI(q);
+  }else if(q.kind==='box'){
+    body+=`<div class="card"><span class="label">Stageboxok, sorrendben</span><div class="boxes">${q.sizes.map((z,j)=>`<span class="sb"><b>SB${j+1}</b> · ${z} ch</span>`).join('')}</div>
+      <p class="small muted">Az SB1 1-es csatornája a konzol <b class="mono" style="color:var(--text)">${q.start}</b>. inputja${q.start>1?' (1–'+(q.start-1)+': lokál bemenetek)':''}.</p></div>`+askHtml(q)+answerUI(q);
+  }else if(q.kind==='fix'){
+    const c=q.ctx,lim=q.max&&q.log.length>=q.max;
+    const title=q.sym==='x'?'SB2 · CH 17–24':`CH ${c.k} · ${esc(c.name)}`;
+    const path=q.sym==='x'?'SB2 → hálózat / multi → pult · Input 17–24':q.sym==='m'?`${SRC[c.t]} · CH ${c.k} → aux → ${c.mon} (${c.montype})`:`${SRC[c.t]} · ${c.port} → Input ${c.input} → CH ${c.k}`;
+    body+=`<div class="rule"><b>Szabály</b>${esc(RULES[(S.i+S.ruleOff)%RULES.length])}</div>
+      <div class="card"><span class="label">Hibajelentés</span><div class="rep">${title}</div><div class="sym">${q.symTxt}</div>
+      <div class="hist">${esc(c.hist)}</div><div class="small muted">${path}</div>${q.sym==='n'?chainView(q):''}</div>
+      <div class="card"><span class="label">Ellenőrzés${q.max?' · max '+q.max:''}</span>
+      <div class="checks">${q.checks.map(id=>`<button class="chk" data-act="chk" data-v="${id}" ${S.answered||lim||q.log.some(l=>l.id===id)?'disabled':''}>${checkLabel(id)}</button>`).join('')}</div>
+      ${q.log.length?`<div class="log">${q.log.map(l=>`<div class="logi"><b>${checkLabel(l.id)}</b><span>${esc(l.txt)}</span></div>`).join('')}</div>`:'<p class="small muted">Koppints egy ellenőrzésre, vagy ha már tudod, válaszolj rögtön.</p>'}</div>`;
+    body+=`<div class="ask"><span class="muted">${q.ask}</span><span class="timer" id="timer">0.0 s</span></div>`+answerUI(q);
+  }
+  app.innerHTML=header()+body;
+}
+function recall(){
+  stopTimers();
+  const shown=S.reqs.filter(r=>r.shown),keys=new Set(S.reqs.map(rkey));
+  const items=shown.map(r=>({r,real:true}));
+  shown.forEach(r=>{const d=decoyFor(r,keys);if(d)items.push({r:d,real:false})});
+  while(items.length<6){const r={w:pick(WHO),d:Math.random()<.7,i:pick(INST)};if(!keys.has(rkey(r))){keys.add(rkey(r));items.push({r,real:false})}}
+  S.recall={items:shuffle(items),sel:new Set(),done:false,shown:shown.length};
+  renderRecall();
+}
+function renderRecall(){
+  const Rc=S.recall;let res='';
+  if(Rc.done){
+    const hits=Rc.items.filter((it,k)=>it.real&&Rc.sel.has(k)).length,fa=Rc.items.filter((it,k)=>!it.real&&Rc.sel.has(k)).length;
+    S.reqScore={hits,fa,total:Rc.shown};
+    res=`<div class="fb ${hits===Rc.shown&&!fa?'good':'bad'}"><div class="h">${hits}/${Rc.shown} kérés megvan${fa?' · '+fa+' téves':''}</div>
+      <p class="small">Zöld: eltaláltad. Sárga: kimaradt. Piros: ilyen kérés nem jött.</p><button class="btn" data-act="sum">Összegzés</button></div>`;
+  }
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Műszak vége</span><span class="pill">${Rc.shown} kérés jött</span></div>
+    <div class="ask"><span class="big" style="font-size:30px">Milyen kéréseket kaptál?</span>
+    <span class="muted small">Jelöld be mindet, amire emlékszel. Figyelj a részletekre: melyik monitor, több vagy kevesebb, milyen hangszer.</span></div>
+    <div class="reqs">${Rc.items.map((it,k)=>{
+      let cls=Rc.sel.has(k)?'on':'',tag='';
+      if(Rc.done){cls=it.real?(Rc.sel.has(k)?'hit':'miss'):(Rc.sel.has(k)?'wrong':'');tag=it.real?(Rc.sel.has(k)?'megvan':'kimaradt'):(Rc.sel.has(k)?'nem jött':'')}
+      return `<button class="req ${cls}" data-act="req" data-v="${k}" ${Rc.done?'disabled':''}><span class="box">${Rc.sel.has(k)?'✓':''}</span><span>${esc(rtext(it.r))}</span><span class="tag">${tag}</span></button>`}).join('')}</div>
+    ${Rc.done?res:'<button class="btn" data-act="reqdone">Kész</button>'}`;
+}
+function recall2(){
+  stopTimers();
+  S.shownIncs=S.incs.filter(x=>x.shown);
+  S.r2={t:null,i:null,items:[],done:false};
+  renderRecall2();
+}
+function renderRecall2(){
+  const R2=S.r2;let res='';
+  if(R2.done){
+    res=`<div class="fb ${S.hits.length===S.shownIncs.length&&!S.falseItems.length?'good':'bad'}"><div class="h">${S.hits.length}/${S.shownIncs.length} megvan${S.falseItems.length?' · '+S.falseItems.length+' téves':''}</div>
+      <div class="items">${S.shownIncs.map(x=>`<div class="it ${S.hits.includes(x)?'hit':'miss'}"><span>${esc(x.target)} · ${esc(x.issue)}</span><span class="small muted">${S.hits.includes(x)?'megvan':'elfelejtetted'}</span></div>`).join('')}
+      ${S.falseItems.map(it=>`<div class="it wrong"><span>${esc(it.t)} · ${esc(it.i)}</span><span class="small muted">ilyen nem jött</span></div>`).join('')}</div>
+      ${S.missed.length?'<p class="small muted">Amit elfelejtettél, az a végén visszajön, és azt is meg kell oldanod.</p>':''}
+      <button class="btn" data-act="r2next">${S.hits.length>=2?'Tovább: sorrend':'Tovább: megoldás'}</button></div>`;
+  }
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Műszak vége</span><span class="pill">${S.shownIncs.length} esemény</span></div>
+    <div class="ask"><span class="big" style="font-size:30px">Mi jött be a műszak alatt?</span>
+    <span class="muted small">Válaszd ki, hol vagy kinél, aztán hogy mi. Annyit adj hozzá, amennyire emlékszel.</span></div>
+    ${R2.done?'':`<div class="card"><span class="label">Hol / kinél</span><div class="chips2">${TARGETS.map(t=>`<button class="chip2 ${R2.t===t?'on':''}" data-act="r2t" data-v="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+    <span class="label">Mi</span><div class="chips2">${ISSUES.map(i=>`<button class="chip2 ${R2.i===i?'on':''}" data-act="r2i" data-v="${esc(i)}">${esc(i)}</button>`).join('')}</div>
+    <button class="btn ghost" data-act="r2add" ${R2.t&&R2.i?'':'disabled'}>Hozzáadás${R2.t&&R2.i?': '+esc(R2.t)+' · '+esc(R2.i):''}</button></div>
+    <div class="items">${R2.items.map((it,k)=>`<div class="it"><span>${esc(it.t)} · ${esc(it.i)}</span><button data-act="r2del" data-v="${k}" aria-label="Törlés">×</button></div>`).join('')||'<p class="small muted">Még nincs semmi a listán.</p>'}</div>
+    <button class="btn" data-act="r2done">Kész</button>`}
+    ${res}`;
+}
+function r2finish(){
+  const keys=S.r2.items.map(it=>it.t+'|'+it.i);
+  S.hits=S.shownIncs.filter(x=>keys.includes(incKey(x)));
+  S.missed=S.shownIncs.filter(x=>!S.hits.includes(x));
+  S.falseItems=S.r2.items.filter(it=>!S.shownIncs.some(x=>incKey(x)===it.t+'|'+it.i));
+  S.r2.done=true;renderRecall2();
+}
+function renderTriage(){
+  const T=S.tri;let res='';
+  if(T.done){
+    const pr=T.order.map(k=>S.hits[k].prio);let good=true;for(let i=1;i<pr.length;i++)if(pr[i]>pr[i-1])good=false;
+    S.triOk=good;
+    res=`<div class="fb ${good?'good':'bad'}"><div class="h">${good?'Jó sorrend':'Lehetett volna jobb sorrend'}</div>
+      <div class="lesson"><b>Tanulság</b>Előre azt, ami a műsort vagy a közönséget érinti (néma láda, zúgó PA). Utána azt, ami egy zenészt zavar játék közben (egyoldalas fül, recsegés). A kényelmi kérések várhatnak.</div>
+      <button class="btn" data-act="solvestart">Megoldás</button></div>`;
+  }
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Sorrend</span><span></span></div>
+    <div class="ask"><span class="big" style="font-size:30px">Milyen sorrendben intézed?</span><span class="muted small">Koppints rájuk abban a sorrendben, ahogy nekiállnál.</span></div>
+    <div class="reqs">${S.hits.map((x,k)=>{const pos=T.order.indexOf(k);return `<button class="tri ${pos>=0?'on':''}" data-act="tri" data-v="${k}" ${T.done||pos>=0?'disabled':''}><span class="no">${pos>=0?pos+1:''}</span><span>${esc(x.target)} · ${esc(x.issue)}</span></button>`}).join('')}</div>
+    ${T.done?res:`<div class="duo" style="grid-template-columns:1fr 2fr"><button data-act="trireset"><b>Újra</b></button><button data-act="tridone" ${T.order.length===S.hits.length?'':'disabled'} style="background:var(--accent);color:#1a1205;border-color:var(--accent)"><b>Kész</b></button></div>`}`;
+}
+function startSolve(){
+  const ord=S.tri?S.tri.order.map(k=>S.hits[k]):S.hits.slice();
+  S.missed.forEach(x=>x.back=true);
+  S.solveList=ord.concat(S.missed);S.si=0;
+  if(!S.solveList.length)return summary();
+  S.t0=performance.now();renderSolve();
+}
+function renderSolve(){
+  const inc=S.solveList[S.si],P=inc.type==='prob'?PROBS[inc.id]:null;
+  const steps=inc.log.length;
+  let body=`<div class="top"><button class="x" data-act="home">Kilépés</button><span>Megoldás</span><span class="pill">${S.si+1}/${S.solveList.length}</span></div>`;
+  if(inc.back)body+=`<div class="rule"><b>Visszajött</b>Ezt elfelejtetted, most már a dal közben szólnak érte.</div>`;
+  body+=`<div class="card"><span class="label">${inc.type==='prob'?'Bejelentés':'Kérés'}</span><div class="rep">${esc(inc.target)}</div><div class="sym">${esc(inc.issue)}</div></div>`;
+  if(P)body+=`<div class="card"><span class="label">Ellenőrzés</span><div class="checks">${P.checks.map(([id,lab])=>`<button class="chk" data-act="sck" data-v="${id}" ${inc.solved||inc.log.some(l=>l.id===id)?'disabled':''}>${esc(lab)}</button>`).join('')}</div></div>`;
+  const acts=P?P.actions:inc.acts;
+  body+=`<div class="card"><span class="label">Beavatkozás</span><div class="acts">${acts.map(([id,lab])=>`<button class="act" data-act="sac" data-v="${id}" ${inc.solved||inc.log.some(l=>l.id==='a:'+id)?'disabled':''}>${esc(lab)}</button>`).join('')}</div></div>`;
+  if(inc.log.length)body+=`<div class="log">${inc.log.map(l=>`<div class="logi ${l.a?'a':''}"><b>${esc(l.lab)}</b><span>${esc(l.txt)}</span></div>`).join('')}</div>`;
+  if(inc.solved)body+=`<div class="fb good"><div class="h">Megoldva ${steps} lépésből</div><div class="lesson"><b>Tanulság</b>${esc(P?P.tip:REQ_TIP)}</div>
+    <button class="btn" data-act="snext">${S.si+1<S.solveList.length?'Következő':'Összegzés'}</button></div>`;
+  else body+=`<p class="small muted">Lépések eddig: ${steps}. Ellenőrizz, aztán avatkozz be. A rossz beavatkozás is lépésnek számít.</p>`;
+  app.innerHTML=body;
+}
+function solveAct(id,isAction){
+  const inc=S.solveList[S.si],P=inc.type==='prob'?PROBS[inc.id]:null;
+  if(!isAction){const lab=P.checks.find(c=>c[0]===id)[1];inc.log.push({id,lab,txt:obs2(inc,id)});return renderSolve()}
+  const acts=P?P.actions:inc.acts,lab=acts.find(a=>a[0]===id)[1];
+  const ok=P?inc.cause.fix===id:id==='ok';
+  inc.log.push({id:'a:'+id,lab,a:true,txt:ok?(P?'Szól, rendben van.':'A zenész felmutatja a hüvelykujját.'):(P?'Megcsináltad, de nem változott semmi.':'A zenész jelez: nem ez.')});
+  if(ok){inc.solved=true;inc.time=(performance.now()-S.t0)/1000}
+  renderSolve();
+}
+function summary(){
+  stopTimers();screen='game';S.done=true;
+  const m=S.mode,n=S.times.length,avg=n?S.times.reduce((a,b)=>a+b,0)/n:0,tot=S.times.reduce((a,b)=>a+b,0);
+  const prev=info(m);const rec={level:S.level,sessions:(prev.sessions||0)+1,best:prev.best,bestTxt:prev.bestTxt};
+  let extra='',stats='',newRec=false;
+  if(m==='sprint'){
+    rec.last=S.correct+' helyes';
+    if(prev.best==null||S.correct>prev.best){rec.best=S.correct;rec.bestTxt=S.correct+' helyes';newRec=prev.best!=null||S.correct>0}
+    stats=`<div class="stat"><div class="v">${S.correct}</div><div class="l">helyes 120 mp alatt</div></div><div class="stat"><div class="v">${S.wrong}</div><div class="l">hibás</div></div>
+      <div class="stat"><div class="v">${n?fmt(avg):'–'} s</div><div class="l">átlag feladatonként</div></div><div class="stat"><div class="v">${rec.best??'–'}</div><div class="l">rekord</div></div>`;
+  }else if(m==='shift2'){
+    const probs=S.solveList?S.solveList.filter(x=>x.type==='prob'):[];
+    const avgSteps=probs.length?probs.reduce((a,x)=>a+x.log.length,0)/probs.length:0;
+    const shown=S.shownIncs?S.shownIncs.length:0,hits=S.hits?S.hits.length:0,fa=S.falseItems?S.falseItems.length:0;
+    let lv=S.level;
+    if(shown&&hits===shown&&!fa&&(!probs.length||avgSteps<=3)&&lv<MODES.shift2.max)lv++;
+    else if(shown-hits>=2&&lv>1)lv--;
+    rec.level=lv;S.level=lv;
+    rec.last=`emlék ${hits}/${shown}, ${fmt(avgSteps)} lépés`;
+    stats=`<div class="stat"><div class="v">${S.correct}/${S.total}</div><div class="l">munka közbeni feladat</div></div>
+      <div class="stat"><div class="v">${hits}/${shown}</div><div class="l">bejelentés megjegyezve${fa?', '+fa+' téves':''}</div></div>
+      <div class="stat"><div class="v">${probs.length?fmt(avgSteps):'–'}</div><div class="l">lépés hibánként (jó: 3 alatt)</div></div>
+      <div class="stat"><div class="v">${S.startLevel} → ${lv}</div><div class="l">${S.triOk===false?'a sorrenden lehet javítani':S.triOk?'jó sorrend':'szint'}</div></div>`;
+    extra=`<div class="rule"><b>Szabály</b>Amit élesben nem tudsz rögtön megoldani, írd fel vagy mondd vissza hangosan. A fejed nem jegyzettömb.</div>`;
+  }else if(m==='shiftL'){
+    const d=Math.abs((S.lampAns??-99)-S.flR);let lv=S.level;
+    if(d===0&&S.correct>=S.total-2&&lv<MODES.shiftL.max)lv++;else if(d>=2&&lv>1)lv--;
+    rec.level=lv;rec.last=`lámpa ${S.lampAns??'–'}/${S.flR}, feladat ${S.correct}/${S.total}`;
+    stats=`<div class="stat"><div class="v">${S.correct}/${S.total}</div><div class="l">munka közbeni feladat</div></div>
+      <div class="stat"><div class="v">${S.lampAns??'–'} / ${S.flR}</div><div class="l">villanás: tipp / valós</div></div>
+      <div class="stat"><div class="v">${S.startLevel} → ${lv}</div><div class="l">szint</div></div>`;
+  }else if(m==='calc10'){
+    rec.last=S.correct+'/'+S.total+', '+fmt(tot)+' s';
+    if(S.correct===S.total&&(prev.best==null||tot<prev.best)){rec.best=Math.round(tot*10)/10;rec.bestTxt=fmt(tot)+' s';newRec=true}
+    stats=`<div class="stat"><div class="v">${S.correct}/${S.total}</div><div class="l">helyes</div></div><div class="stat"><div class="v">${fmt(tot)} s</div><div class="l">összidő</div></div>
+      <div class="stat"><div class="v">${fmt(avg)} s</div><div class="l">átlag feladatonként</div></div><div class="stat"><div class="v">${rec.bestTxt||'–'}</div><div class="l">rekord (hibátlan körből)</div></div>`;
+  }else if(m==='span'){
+    rec.last=S.best+' számjegy';
+    if(prev.best==null||S.best>prev.best){rec.best=S.best;rec.bestTxt=S.best+' számjegy';newRec=prev.best!=null}
+    stats=`<div class="stat"><div class="v">${S.best||'–'}</div><div class="l">leghosszabb hibátlan sor</div></div><div class="stat"><div class="v">${rec.best??'–'}</div><div class="l">rekord</div></div>
+      <div class="stat"><div class="v">${n?fmt(avg):'–'} s</div><div class="l">átlagos beírási idő</div></div><div class="stat"><div class="v">${S.correct}</div><div class="l">sikeres sor</div></div>`;
+    extra=`<p class="small muted">Átlagosan 5–9 számjegyet tud fejben tartani valaki. Csoportosítással (pl. 3-3-ban) messzebbre jutsz.</p>`;
+  }else{
+    rec.last=S.correct+'/'+S.total+(S.reqScore?', kérések '+S.reqScore.hits+'/'+S.reqScore.total:'');
+    const lvTxt=S.level>S.startLevel?'Feljebb léptél':S.level<S.startLevel?'Visszaléptél':'Szinten maradtál';
+    stats=`<div class="stat"><div class="v">${S.correct}/${S.total}</div><div class="l">helyes válasz</div></div>
+      <div class="stat"><div class="v">${fmt(avg)} s</div><div class="l">átlagidő kérdésenként</div></div>
+      ${MODES[m].max>1?`<div class="stat"><div class="v">${S.startLevel} → ${S.level}</div><div class="l">${lvTxt}</div></div>`:''}
+      ${S.reqScore?`<div class="stat"><div class="v">${S.reqScore.hits}/${S.reqScore.total}</div><div class="l">kérés megjegyezve${S.reqScore.fa?', '+S.reqScore.fa+' téves':''}</div></div>`:''}`;
+    if(m==='tt10')extra=`<div class="card"><span class="label">Így áll a szorzótábla</span>${ttGrid()}<p class="small muted">Zöld: gyorsan és pontosan megy. Sárga: még lassú. Piros: gyakran elrontod. Szürke: még nem jött.</p></div>`;
+    if(m==='tt10'||m==='ttx'){const w=weakFacts(m,8);if(w.length)extra+=`<div class="card"><span class="label">Ezeket gyakorold</span><div class="weak">${w.map(x=>`<span>${x}</span>`).join('')}</div></div>`}
+    if(m==='fix')extra=`<div class="rule"><b>Szabály</b>${esc(RULES[(S.ruleOff+S.total)%RULES.length])}</div>`;
+  }
+  store.modes[m]=rec;save();
+  app.innerHTML=`<div class="top"><button class="x" data-act="home">Főmenü</button><span>${MODES[m].name}</span><span></span></div>
+    <h2 style="font-size:34px">${newRec?'Új rekord!':'Kör vége'}</h2>
+    <div class="stats">${stats}</div>${extra}
+    <button class="btn" data-act="again">Még egy kör</button>
+    <button class="btn ghost" data-act="home">Főmenü</button>`;
+}
+
+/* ---------- EVENTS ---------- */
+function key(v){
+  if(!S||!S.q||S.answered||S.study||S.done||S.q.phase!=='q'||S.q.at==='opt')return;
+  const q=S.q,maxLen=q.kind==='span'?12:4;
+  if(v==='del')S.entry=S.entry.slice(0,-1);
+  else if(v==='ok'){
+    if(!S.entry)return;
+    if(q.kind==='span')return spanAnswer();
+    if(q.kind==='lampq'){S.answered=true;S.lampAns=+S.entry;return renderLampQ()}
+    if(q.at==='boxnum'&&S.boxSel==null)return;
+    const n=+S.entry;return finishAnswer(q.at==='num'?n===q.num:(S.boxSel===q.box&&n===q.ch));
+  }else if(S.entry.length<maxLen){
+    S.entry+=v;
+    if(q.kind==='span'&&S.entry.length===q.str.length)return spanAnswer();
+    if(q.auto&&S.entry.length===String(q.num).length)return finishAnswer(+S.entry===q.num);
+  }
+  if(q.kind==='lampq')return renderLampQ();
+  render();
+}
+app.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  const a=b.dataset.act,v=b.dataset.v;
+  if(a==='mode')return start(v);
+  if(a==='home'){editErr='';return home()}
+  if(a==='reset'){if(!confirmReset){confirmReset=true;return home()}store.modes={};store.facts={};store.fixMiss={};confirmReset=false;save();return home()}
+  if(a==='listmode'){store.listMode=v==='random'?'random':'fixed';save();return home()}
+  if(a==='edit'){editErr='';return renderEdit()}
+  if(a==='listsave'){
+    const lines=document.getElementById('listEdit').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0,64);
+    if(lines.length<6){editErr='Legalább 6 csatorna kell. Most '+lines.length+' sor van.';return renderEdit()}
+    store.list=lines;editErr='';save();return home();
+  }
+  if(a==='listdefault'){store.list=null;editErr='';save();return renderEdit()}
+  if(a==='again')return start(S.mode);
+  if(a==='memsrc'){store.memSrc=v;save();S.memList=memListFor(S.level);return renderStudy()}
+  if(a==='memnew'){S.memList=memListFor(S.level);return renderStudy()}
+  if(a==='study'){S.study=false;return next()}
+  if(a==='memo'){S.q.phase='q';S.t0=performance.now();return render()}
+  if(a==='next'){S.i++;return next()}
+  if(a==='spanretry'){S.i++;return spanRound()}
+  if(a==='spanend')return summary();
+  if(a==='note'&&!S.answered){S.picked=+v;return finishAnswer(+v===S.q.note)}
+  if(a==='nnames'){store.noteNames=v==='hu'?'hu':'intl';save();return home()}
+  if(a==='opt'&&!S.answered){S.picked=+v;return finishAnswer(S.q.options[+v]===S.q.correct)}
+  if(a==='chk'&&!S.answered){const q=S.q;if(q.max&&q.log.length>=q.max)return;if(!q.log.some(l=>l.id===v))q.log.push({id:v,txt:obs(q,v)});return render()}
+  if(a==='boxsel'){S.boxSel=+v;return render()}
+  if(a==='key')return key(v);
+  if(a==='req'){const Rc=S.recall;Rc.sel.has(+v)?Rc.sel.delete(+v):Rc.sel.add(+v);return renderRecall()}
+  if(a==='reqdone'){S.recall.done=true;return renderRecall()}
+  if(a==='sum')return summary();
+  if(a==='r2t'){S.r2.t=v;return renderRecall2()}
+  if(a==='r2i'){S.r2.i=v;return renderRecall2()}
+  if(a==='r2add'){const R2=S.r2;if(R2.t&&R2.i&&!R2.items.some(it=>it.t===R2.t&&it.i===R2.i))R2.items.push({t:R2.t,i:R2.i});R2.t=null;R2.i=null;return renderRecall2()}
+  if(a==='r2del'){S.r2.items.splice(+v,1);return renderRecall2()}
+  if(a==='r2done')return r2finish();
+  if(a==='r2next'){if(S.hits.length>=2){S.tri={order:[],done:false};return renderTriage()}return startSolve()}
+  if(a==='tri'){if(!S.tri.order.includes(+v))S.tri.order.push(+v);return renderTriage()}
+  if(a==='trireset'){S.tri.order=[];return renderTriage()}
+  if(a==='tridone'){S.tri.done=true;return renderTriage()}
+  if(a==='solvestart')return startSolve();
+  if(a==='sck')return solveAct(v,false);
+  if(a==='sac')return solveAct(v,true);
+  if(a==='snext'){S.si++;if(S.si>=S.solveList.length)return summary();S.t0=performance.now();return renderSolve()}
+});
+document.addEventListener('keydown',e=>{
+  if(screen!=='game'||!S||e.target.tagName==='TEXTAREA')return;
+  if(/^[0-9]$/.test(e.key))key(e.key);else if(e.key==='Backspace')key('del');else if(e.key==='Enter')key('ok');
+});
+setInterval(()=>{
+  if(!S||S.done)return;
+  const t=document.getElementById('timer');
+  if(t&&S.q&&S.q.phase==='q'&&!S.answered&&!S.study)t.textContent=((performance.now()-S.t0)/1000).toFixed(1)+' s';
+  if(S.mode==='sprint'){
+    const left=Math.max(0,(S.endAt-performance.now())/1000);
+    const cd=document.getElementById('cd'),bar=document.getElementById('cdbar');
+    if(cd){cd.textContent=Math.ceil(left)+' s';cd.classList.toggle('hot',left<15)}
+    if(bar)bar.style.width=((1-left/120)*100)+'%';
+    if(left<=0&&!S.answered)summary();
+  }
+},100);
+home();
+initSync();
+})();
+</script>
+</body>
+</html>
